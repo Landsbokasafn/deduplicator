@@ -1,0 +1,23 @@
+<assembly>
+  <id>src</id>
+  <formats>
+    <format>tar.gz</format>
+    <format>zip</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <fileSets>
+    <fileSet>
+      <includes>
+        <include>LICENSE*</include>
+        <include>pom.xml</include>
+        <include>.*</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+    	<directory>src/main</directory>
+    </fileSet>
+    <fileSet>
+    	<directory>src/test</directory>
+    </fileSet>
+  </fileSets>
+</assembly>

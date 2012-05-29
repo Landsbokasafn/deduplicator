@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>is.landsbokasafn</groupId>
+    <artifactId>deduplicator</artifactId>
+    <name>DeDuplicator3 (Heritrix 3 add-on module)</name>
+    <version>3.0.0-SNAPSHOT</version>
+    <description>
+        An add-on module for the web crawler Heritrix 3 that offers a
+        means to reduce the amount of duplicate data collected in a
+        series of snapshot crawls.
+    </description>
+    <url>http://deduplicator.sourceforge.net/</url>
+    <issueManagement>
+        <system>SourceForge Trackers</system>
+        <url>http://sourceforge.net/tracker/?group_id=181565</url>
+    </issueManagement>
+    <mailingLists>
+        <mailingList>
+            <name>
+                Crawler Discussion List (General Heritrix Discussion)
+            </name>
+            <subscribe>
+                mailto:archive-crawler-subscribe@yahoogroups.com
+            </subscribe>
+            <unsubscribe>
+                mailto:archive-crawler-unsubscribe@yahoogroups.com
+            </unsubscribe>
+            <post>mailto:archive-crawler@yahoogroups.com</post>
+            <archive>
+                http://groups.yahoo.com/group/archive-crawler/
+            </archive>
+        </mailingList>
+        <mailingList>
+            <name>DeDuplicator CVS Commits</name>
+            <subscribe>
+                http://lists.sourceforge.net/lists/listinfo/deduplicator-cvs
+            </subscribe>
+            <unsubscribe>
+                http://lists.sourceforge.net/lists/listinfo/deduplicator-cvs
+            </unsubscribe>
+            <archive>
+                http://sourceforge.net/mailarchive/forum.php?forum=deduplicator-cvs
+            </archive>
+        </mailingList>
+    </mailingLists>
+    <developers>
+        <developer>
+            <id>Kristinn</id>
+            <name>Kristinn Sigurðsson</name>
+            <email>kristsi at bok.hi.is</email>
+            <organization>
+                National and University Library of Iceland
+            </organization>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone>+0</timezone>
+        </developer>
+    </developers>
+    <contributors>
+        <contributor>
+            <name>Lars Clausen</name>
+            <email>lc at statsbiblioteket.dk</email>
+            <organization>Netarkivet.dk</organization>
+            <timezone>+1</timezone>
+        </contributor>
+        <contributor>
+            <name>Maximilian Schoefmann</name>
+            <email>schoefma at cip.ifi.lmu.de</email>
+        </contributor>
+        <contributor>
+            <name>Kare Fiedler Christiansen</name>
+            <email>kfc at statsbiblioteket.dk</email>
+            <organization>Netarkivet.dk</organization>
+            <timezone>+1</timezone>
+        </contributor>
+    </contributors>
+    <scm>
+        <connection>
+            scm:cvs:pserver:anonymous:@deduplicator.cvs.sourceforge.net:/cvsroot/deduplicator:deduplicator3
+        </connection>
+        <developerConnection>
+            scm:cvs:ext:developername@deduplicator.cvs.sourceforge.net:/cvsroot/deduplicator:deduplicator3
+        </developerConnection>
+        <url>
+            http://deduplicator.cvs.sourceforge.net/deduplicator/deduplicator3/
+        </url>
+    </scm>
+    <organization>
+        <name>National and University Library of Iceland</name>
+        <url>http://www.landsbokasafn.is</url>
+    </organization>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <build>
+        <finalName>${project.artifactId}-${project.version}-${buildNumber}</finalName>
+        <plugins>
+            <!-- this is a java 1.6 project -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>buildnumber-maven-plugin</artifactId>
+                <version>1.0-beta-1</version>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <format>{0,date,yyyyMMdd}</format>
+                    <items>
+                        <item>timestamp</item>
+                    </items>
+                    <doCheck>false</doCheck>
+                    <doUpdate>false</doUpdate>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>
+                            src/main/assembly/dist.xml
+                        </descriptor>
+                        <descriptor>
+                            src/main/assembly/src.xml
+                        </descriptor>
+                    </descriptors>
+                    <finalName>${project.artifactId}-${project.version}-${buildNumber}</finalName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-site-plugin</artifactId>
+                <configuration>
+                    <locales>en</locales>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>3.8.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.archive.heritrix</groupId>
+            <artifactId>heritrix-commons</artifactId>
+            <version>3.1.0-RC1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.archive.heritrix</groupId>
+            <artifactId>heritrix-modules</artifactId>
+            <version>3.1.0-RC1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.archive.heritrix</groupId>
+            <artifactId>heritrix-engine</artifactId>
+            <version>3.1.0-RC1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+        	<groupId>org.apache.lucene</groupId>
+        	<artifactId>lucene-core</artifactId>
+        	<version>3.0.2</version>
+        </dependency>
+    </dependencies>
+    <reporting>
+        <plugins>
+            <plugin>
+                <artifactId>maven-javadoc-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jxr-maven-plugin</artifactId>
+                <configuration>
+                    <overview>
+                        ${basedir}/src/main/java/is/landsbokasafn/deduplicator/overview.html
+                    </overview>
+                    <version>true</version>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
+    <distributionManagement>
+        <site>
+            <id>website</id>
+            <url>
+                scp://deduplicator.sourceforge.net/home/groups/d/de/deduplicator/htdocs/
+            </url>
+        </site>
+    </distributionManagement>
+</project>
+

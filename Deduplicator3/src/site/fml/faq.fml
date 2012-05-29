@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<faqs id="General FAQ">
+  <part id="General">
+    <faq id="what">
+      <question>What is the DeDuplicator?</question>
+      <answer>
+        <p>
+          The DeDuplicator is an add-on module for the web crawler Heritrix.
+          It offers a means to reduce the amount of duplicate data collected
+          in a series of snapshot crawls.
+        </p>
+      </answer>
+    </faq>
+  </part>
+</faqs>
