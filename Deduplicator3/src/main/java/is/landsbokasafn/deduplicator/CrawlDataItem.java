@@ -37,6 +37,7 @@ public class CrawlDataItem {
 	public static final String dateFormat = "yyyyMMddHHmmssSSS";
     
     protected String URL;
+    protected String statusCode;
     protected String contentDigest;
     protected String timestamp;
     protected String etag;

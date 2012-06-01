@@ -12,6 +12,17 @@ The DeDuplicator (Heritrix add-on module)
 * News
 ~~~~~~
 
+** DeDuplicator for Heritrix 3 source now on GitHub - 29/05/2012
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ The code for the Heritrix 3 Deduplicator can now be found on {{{https://github.com/kris-sigur/deduplicator}GitHub}}.
+ 
+ No further development will be made on the version for Heritrix 1, but the source code for it and an older revision
+ of the one for H3 can still be found in the CVS on SourceForge. 
+ 
+ Version 3.0.0-SNAPSHOT-20120529 is now available {{{release3.html}here}}. Updated for Heritrix 3.1. 
+
+
 ** DeDuplicator for Heritrix 3 - 23/07/2010
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

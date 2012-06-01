@@ -45,13 +45,13 @@ Release History - DeDuplicator for Heritrix 1
  
 * 0.3.0-20080527
 ~~~~~~~~~~~~~~~~
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20080527-bin.tar.gz}deduplicator-0.3.0-20080527-bin.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20080527-bin.tar.gz}deduplicator-0.3.0-20080527-bin.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20080527-bin.zip}deduplicator-0.3.0-20080527-bin.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20080527-bin.zip}deduplicator-0.3.0-20080527-bin.zip}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20080527-src.tar.gz}deduplicator-0.3.0-20080527-src.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20080527-src.tar.gz}deduplicator-0.3.0-20080527-src.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20080527-src.zip}deduplicator-0.3.0-20080527-src.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20080527-src.zip}deduplicator-0.3.0-20080527-src.zip}}
  
  Applied patches from K�re Fiedler Christiansen. It includes a new 'SpareRangeFilter' that now optionally replaces Lucene's RangeFilter when 
  making queries. This reduces the memory usage at a cost to performance. Also a minor NPE bugfix patch was included. 
@@ -61,13 +61,13 @@ Release History - DeDuplicator for Heritrix 1
 		
 * 0.3.0-20080129
 ~~~~~~~~~~~~~~~~
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20080129-bin.tar.gz}deduplicator-0.3.0-20080129-bin.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20080129-bin.tar.gz}deduplicator-0.3.0-20080129-bin.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20080129-bin.zip}deduplicator-0.3.0-20080129-bin.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20080129-bin.zip}deduplicator-0.3.0-20080129-bin.zip}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20080129-src.tar.gz}deduplicator-0.3.0-20080129-src.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20080129-src.tar.gz}deduplicator-0.3.0-20080129-src.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20080129-src.zip}deduplicator-0.3.0-20080129-src.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20080129-src.zip}deduplicator-0.3.0-20080129-src.zip}}
  
  Applied patch from Lars Clausen. Issue as explained by Lars: "We've run across a scaling issue in the use of TermQuery for Lucene indexes of 400+ million entries.  TermQuery uses norms, which spends one byte of memory per entry in the index.  Even turning off norms on the index doesn't help, since TermQuery in the most friendly way creates a fake array of norms.  This patch changes the deduplicator to use a ConstantScoreQuery with a RangeFilter, which avoids most of the memory usage and doesn't seem to affect the speed."
  Patch is untested at this time. 
@@ -75,39 +75,39 @@ Release History - DeDuplicator for Heritrix 1
 		
 * 0.3.0-20070601
 ~~~~~~~~~~~~~~~~
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20070601-bin.tar.gz}deduplicator-0.3.0-20070601-bin.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20070601-bin.tar.gz}deduplicator-0.3.0-20070601-bin.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20070601-bin.zip}deduplicator-0.3.0-20070601-bin.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20070601-bin.zip}deduplicator-0.3.0-20070601-bin.zip}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20070601-src.tar.gz}deduplicator-0.3.0-20070601-src.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20070601-src.tar.gz}deduplicator-0.3.0-20070601-src.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20070601-src.zip}deduplicator-0.3.0-20070601-src.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20070601-src.zip}deduplicator-0.3.0-20070601-src.zip}}
 
  While still compiled against version 1.10.0 of Heritrix, this release now handles the changed crawl.log format of Heritrix 1.12.0 which prefixes the content digest with the name of the scheme.
 
 		
 * 0.3.0-20061218
 ~~~~~~~~~~~~~~~~
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20061218-bin.tar.gz}deduplicator-0.3.0-20061218-bin.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20061218-bin.tar.gz}deduplicator-0.3.0-20061218-bin.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20061218-bin.zip}deduplicator-0.3.0-20061218-bin.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20061218-bin.zip}deduplicator-0.3.0-20061218-bin.zip}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20061218-src.tar.gz}deduplicator-0.3.0-20061218-src.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20061218-src.tar.gz}deduplicator-0.3.0-20061218-src.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20061218-src.zip}deduplicator-0.3.0-20061218-src.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20061218-src.zip}deduplicator-0.3.0-20061218-src.zip}}
 
  Added (patch by Maximilian Schoefmann) the ability to exclude URLs marked as duplicates in crawl.log from the index.
 
 		
 * 0.3.0-20061031
 ~~~~~~~~~~~~~~~~
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20061031-bin.tar.gz}deduplicator-0.3.0-20061031-bin.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20061031-bin.tar.gz}deduplicator-0.3.0-20061031-bin.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20061031-bin.zip}deduplicator-0.3.0-20061031-bin.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20061031-bin.zip}deduplicator-0.3.0-20061031-bin.zip}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20061031-src.tar.gz}deduplicator-0.3.0-20061031-src.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20061031-src.tar.gz}deduplicator-0.3.0-20061031-src.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-0.3.0-20061031-src.zip}deduplicator-0.3.0-20061031-src.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-0.3.0-20061031-src.zip}deduplicator-0.3.0-20061031-src.zip}}
 
  Fixed a bug (reported by Lars Clausen) in CrawlLogIterator where malformed lines in the crawl.log would cause an exception. Is now handled gracefully. Also added unit tests for CrawlLogIterator.parseLine(). To facilitate that parseLine() is now a static method.
 		
@@ -129,13 +129,13 @@ Release History - DeDuplicator for Heritrix 1
 * PreRelease20060808
 ~~~~~~~~~~~~~~~~~~~~
 
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-PreRelease20060808-bin.tar.gz}deduplicator-PreRelease20060808-bin.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-PreRelease20060808-bin.tar.gz}deduplicator-PreRelease20060808-bin.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-PreRelease20060808-bin.zip}deduplicator-PreRelease20060808-bin.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-PreRelease20060808-bin.zip}deduplicator-PreRelease20060808-bin.zip}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-PreRelease20060808-src.tar.gz}deduplicator-PreRelease20060808-src.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-PreRelease20060808-src.tar.gz}deduplicator-PreRelease20060808-src.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-PreRelease20060808-src.zip}deduplicator-PreRelease20060808-src.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-PreRelease20060808-src.zip}deduplicator-PreRelease20060808-src.zip}}
 
  Fixed a bug (reported by Lars Clausen) in CrawlLogIterator where entries of files exceeding 10GB would not be parsed correctly since the crawl.log format assumes that the byte size string can never be longer then 10 characters, 10 GB requires 11 characters causing the URL to be shifted down the line.
 
@@ -143,13 +143,13 @@ Release History - DeDuplicator for Heritrix 1
 * PreRelease20060717
 ~~~~~~~~~~~~~~~~~~~~
 
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-PreRelease20060718-bin.tar.gz}deduplicator-PreRelease20060718-bin.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-PreRelease20060718-bin.tar.gz}deduplicator-PreRelease20060718-bin.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-PreRelease20060718-bin.zip}deduplicator-PreRelease20060718-bin.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-PreRelease20060718-bin.zip}deduplicator-PreRelease20060718-bin.zip}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-PreRelease20060718-src.tar.gz}deduplicator-PreRelease20060718-src.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-PreRelease20060718-src.tar.gz}deduplicator-PreRelease20060718-src.tar.gz}}
   
-  * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-PreRelease20060718-src.zip}deduplicator-PreRelease20060718-src.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-PreRelease20060718-src.zip}deduplicator-PreRelease20060718-src.zip}}
 
  CrawlLogIterator refactored some more. Project now built with Maven 2.0. First seperate source release.
 
@@ -159,27 +159,27 @@ Release History - DeDuplicator for Heritrix 1
 
  The following releases were made prior to the implementation of the Maven automatic build/release process. Consequently only .tar.gz of the binaries are available. Note that the jar files also contain source files.
  
- * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-prerelease20060717.tar.gz}deduplicator-prerelease20060717.tar.gz}}
+ * {{{http://vefsafn.is/deduplicator_release/deduplicator-prerelease20060717.tar.gz}deduplicator-prerelease20060717.tar.gz}}
  
   * CrawlLogIterator refactored to make subclassing easier - patch from Lars Clausen. Added setters to CrawlDataItem. Improved Javadoc.
 
 
- * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-prerelease20060623.tar.gz}deduplicator-prerelease20060623.tar.gz}}
+ * {{{http://vefsafn.is/deduplicator_release/deduplicator-prerelease20060623.tar.gz}deduplicator-prerelease20060623.tar.gz}}
 
   * DigestIndexer can now be used by other classes. Moved to Lucene 2.0. Improved bash script.
 
 
- * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-prerelease20060606.tar.gz}deduplicator-prerelease20060606.tar.gz}}
+ * {{{http://vefsafn.is/deduplicator_release/deduplicator-prerelease20060606.tar.gz}deduplicator-prerelease20060606.tar.gz}}
  
   * Adds 'origin' and makes overriding of content size configurable
 
 
- * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-prerelease20060601.tar.gz}deduplicator-prerelease20060601.tar.gz}}
+ * {{{http://vefsafn.is/deduplicator_release/deduplicator-prerelease20060601.tar.gz}deduplicator-prerelease20060601.tar.gz}}
  
   * Adds DeDupFetchHTTP
 
 
- * {{{http://vefsofnun.bok.hi.is/deduplicator_release/deduplicator-prerelease20060516.tar.gz}deduplicator-prerelease20060516.tar.gz}}
+ * {{{http://vefsafn.is/deduplicator_release/deduplicator-prerelease20060516.tar.gz}deduplicator-prerelease20060516.tar.gz}}
   
   * Initial preview release
 

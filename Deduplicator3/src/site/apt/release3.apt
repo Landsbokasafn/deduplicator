@@ -7,22 +7,39 @@ Release History - DeDuplicator for Heritrix 3
   Stable releases are clearly labeled as such and can be downloaded via our 
   {{{https://sourceforge.net/project/showfiles.php?group_id=181565}SourceForge download page}}. 
   Any other release may contain unstable/untested elements. They are 
-  provided since a continous build process is not currently available.
+  provided since a continuous build process is not currently available.
   
   No stable releases have been made at this time
   
 ~~Most recent stable release is {{{release.html#0.4.0}0.4.0}}
 
+* {3.0.0-SNAPSHOT-20120529} 
+~~~~~~~~~~~~~~~~~~
+
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-3.0.0-SNAPSHOT-20120529-dist.tar.gz}deduplicator-3.0.0-SNAPSHOT-20120529-dist.tar.gz}}
+  
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-3.0.0-SNAPSHOT-20120529-dist.zip}deduplicator-3.0.0-SNAPSHOT-20120529-dist.zip}}
+  
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-3.0.0-SNAPSHOT-20120529-src.tar.gz}deduplicator-3.0.0-SNAPSHOT-20120529-src.tar.gz}}
+  
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-3.0.0-SNAPSHOT-20120529-src.zip}deduplicator-3.0.0-SNAPSHOT-20120529-src.zip}}
+
+ This version is compiled against Heritrix 3.1.0-RC1 and should work with any 3.1.X version. 
+ 
+ Now only considers 2XX successes, ignores 3XX redirects when checking for duplicates.
+
+ See also notes on previous SNAPSHOT release as they still apply. 
+
 * {3.0.0-SNAPSHOT-20100727} 
 ~~~~~~~~~~~~~~~~~~
 
-  * {{{http://prdownloads.sourceforge.net/deduplicator/deduplicator-3.0.0-SNAPSHOT-20100727-dist.tar.tar.gz?download}deduplicator-3.0.0-SNAPSHOT-20100727-dist.tar.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-3.0.0-SNAPSHOT-20100727-dist.tar.gz}deduplicator-3.0.0-SNAPSHOT-20100727-dist.tar.gz}}
   
-  * {{{http://prdownloads.sourceforge.net/deduplicator/deduplicator-3.0.0-SNAPSHOT-20100727-dist.tar.zip?download}deduplicator-3.0.0-SNAPSHOT-20100727-dist.tar.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-3.0.0-SNAPSHOT-20100727-dist.zip}deduplicator-3.0.0-SNAPSHOT-20100727-dist.zip}}
   
-  * {{{http://prdownloads.sourceforge.net/deduplicator/deduplicator-3.0.0-SNAPSHOT-20100727-src.tar.gz?download}deduplicator-3.0.0-SNAPSHOT-20100727-src.tar.gz}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-3.0.0-SNAPSHOT-20100727-src.tar.gz}deduplicator-3.0.0-SNAPSHOT-20100727-src.tar.gz}}
   
-  * {{{http://prdownloads.sourceforge.net/deduplicator/deduplicator-3.0.0-SNAPSHOT-20100727-src.zip?download}deduplicator-3.0.0-SNAPSHOT-20100727-src.zip}}
+  * {{{http://vefsafn.is/deduplicator_release/deduplicator-3.0.0-SNAPSHOT-20100727-src.zip}deduplicator-3.0.0-SNAPSHOT-20100727-src.zip}}
 
  This version is compiled against Heritrix 3.0.0. 
 

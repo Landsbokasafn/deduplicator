@@ -88,10 +88,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
 
     /* The matching method in use (by url or content digest) */
     private final static String ATTR_MATCHING_METHOD = "matching-method";
-    enum MatchingMethod {
-    	URL,
-    	DIGEST
-    }
     private final static MatchingMethod DEFAULT_MATCHING_METHOD = MatchingMethod.URL; 
     {
         setMatchingMethod(DEFAULT_MATCHING_METHOD);
@@ -219,11 +215,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
     
     /* How should 'origin' be handled */
     public final static String ATTR_ORIGIN_HANDLING = "origin-handling";
-    enum OriginHandling {
-    	NONE,  		// No origin information
-    	PROCESSOR,  // Use processor setting -- ATTR_ORIGIN
-    	INDEX       // Use index information, each hit on index should contain origin
-    }
     public final static OriginHandling DEFAULT_ORIGIN_HANDLING = OriginHandling.NONE;
     {
         setOriginHandling(DEFAULT_ORIGIN_HANDLING);
@@ -425,31 +416,41 @@ public class DeDuplicator extends Processor implements InitializingBean {
             	// A hack to have Heritrix count this as a duplicate.
             	// TODO: Get gojomo to change how Heritrix decides CURIs are duplicates.
                 int targetHistoryLength = 2;
-		        Map[] history = 
-		            (HashMap[]) (curi.containsDataKey(A_FETCH_HISTORY) 
-				    ? curi.getData().get(A_FETCH_HISTORY) 
-				    : new HashMap[targetHistoryLength]);
-                        
-                // Create space 
-		        if(history.length != targetHistoryLength) {
-		            HashMap[] newHistory = new HashMap[targetHistoryLength];
-		            System.arraycopy(
-		                    history,0,
-		                    newHistory,0,
-		                    Math.min(history.length,newHistory.length));
-		            history = newHistory; 
+		        Map[] history = null;
+		        
+		        if (curi.containsDataKey(A_FETCH_HISTORY)) {
+		        	// Rotate up and add new one
+		            history = (HashMap[]) curi.getData().get(A_FETCH_HISTORY);
+		                        
+	                // Create space 
+			        if(history.length != targetHistoryLength) {
+			            HashMap[] newHistory = new HashMap[targetHistoryLength];
+			            System.arraycopy(
+			                    history,0,
+			                    newHistory,0,
+			                    Math.min(history.length,newHistory.length));
+			            history = newHistory; 
+			        }
+	                
+	                // rotate all history entries up one slot except the newest
+	                // insert from index at [1]
+	                for(int i = history.length-1; i >1; i--) {
+	                    history[i] = history[i-1];
+	                }
+	                // Fake the 'last' entry
+	                Map oldVisit = new HashMap();
+	                oldVisit.put(A_CONTENT_DIGEST, curi.getContentDigestSchemeString());
+	                history[1]=oldVisit;
+	                
+		        } else {
+		        	// Fake the whole thing, set the current digest as both the current visit and previous visit 
+				    history = new HashMap[targetHistoryLength];
+
+				    Map oldVisit = new HashMap();
+	                oldVisit.put(A_CONTENT_DIGEST, curi.getContentDigestSchemeString());
+	                history[0]=oldVisit;
+	                history[1]=oldVisit;
 		        }
-                
-                // rotate all history entries up one slot except the newest
-                // insert from index at [1]
-                for(int i = history.length-1; i >1; i--) {
-                    history[i] = history[i-1];
-                }
-                // Fake the 'last' entry
-                Map oldVisit = new HashMap();
-                oldVisit.put(A_CONTENT_DIGEST, curi.getContentDigestSchemeString());
-                history[1]=oldVisit;
-                
                 curi.getData().put(A_FETCH_HISTORY,history);
             	
             } // TODO: Handle matching on digest
