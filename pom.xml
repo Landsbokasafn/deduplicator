@@ -13,24 +13,9 @@
     </description>
   <url>http://deduplicator.sourceforge.net/</url>
   <issueManagement>
-    <system>SourceForge Trackers</system>
-    <url>http://sourceforge.net/tracker/?group_id=181565</url>
+    <system>GitHub Issues</system>
+    <url>https://github.com/Landsbokasafn/deduplicator/issues</url>
   </issueManagement>
-  <mailingLists>
-    <mailingList>
-      <name>Crawler Discussion List (General Heritrix Discussion)</name>
-      <subscribe>mailto:archive-crawler-subscribe@yahoogroups.com</subscribe>
-      <unsubscribe>mailto:archive-crawler-unsubscribe@yahoogroups.com</unsubscribe>
-      <post>mailto:archive-crawler@yahoogroups.com</post>
-      <archive>http://groups.yahoo.com/group/archive-crawler/</archive>
-    </mailingList>
-    <mailingList>
-      <name>DeDuplicator CVS Commits</name>
-      <subscribe>http://lists.sourceforge.net/lists/listinfo/deduplicator-cvs</subscribe>
-      <unsubscribe>http://lists.sourceforge.net/lists/listinfo/deduplicator-cvs</unsubscribe>
-      <archive>http://sourceforge.net/mailarchive/forum.php?forum=deduplicator-cvs</archive>
-    </mailingList>
-  </mailingLists>
   <developers>
     <developer>
       <id>Kristinn</id>
@@ -62,9 +47,9 @@
     </contributor>
   </contributors>
   <scm>
-    <connection>scm:git://github.com/kris-sigur/deduplicator.git</connection>
-    <developerConnection>scm:https://kris-sigur@github.com/kris-sigur/deduplicator.git</developerConnection>
-    <url>https://github.com/kris-sigur/deduplicator</url>
+    <connection>scm:git://github.com/Landsbokasafn/deduplicator.git</connection>
+    <developerConnection>scm:https://kris-sigur@github.com/Landsbokasafn/deduplicator.git</developerConnection>
+    <url>https://github.com/Landsbokasafn/deduplicator</url>
   </scm>
   <organization>
     <name>National and University Library of Iceland</name>
