@@ -177,18 +177,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
 		kp.put(ATTR_ANALYZE_TIMESTAMP,analyzeTimestamp);
     }
 
-    /* Should the content size information be set to zero when a duplicate is found? */
-    public final static String ATTR_CHANGE_CONTENT_SIZE = "change-content-size";
-    {
-    	setChangeContentSize(false);
-    }
-    public boolean getChangeContentSize(){
-    	return (Boolean)kp.get(ATTR_CHANGE_CONTENT_SIZE);
-    }
-    public void setChangeContentSize(boolean changeContentSize){
-    	kp.put(ATTR_CHANGE_CONTENT_SIZE, changeContentSize);
-    }
-
     /* Should statistics be tracked per host? **/
     public final static String ATTR_STATS_PER_HOST = "stats-per-host";
     {
@@ -407,12 +395,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
             // Make note in log
             curi.getAnnotations().add(annotation);
 
-            if(getChangeContentSize()){
-                // Set content size to zero, we are not planning to 
-                // 'write it to disk'
-                // TODO: Reconsider this
-                curi.setContentSize(0);
-            } else if (lookupByURL) {
+            if (lookupByURL) {
             	// A hack to have Heritrix count this as a duplicate.
             	// TODO: Get gojomo to change how Heritrix decides CURIs are duplicates.
                 int targetHistoryLength = 2;
