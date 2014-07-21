@@ -3,7 +3,7 @@ The DeDuplicator (Heritrix add-on module)
 * Release information
 ~~~~~~~~~~~~~~~~~~~~~
  
- Current stable release is {{{./release.html#0.4.0}0.4.0}}.
+ Current stable release is {{{./release3.html#3.0.0}3.0.0}}.
 
  All releases, including interim (potentially unstable) releases can be 
  found here: {{{./release.html}Release History of DeDuplicator for Heritrix 1}} 
@@ -11,6 +11,22 @@ The DeDuplicator (Heritrix add-on module)
  
 * News
 ~~~~~~
+
+** Heritrix changes and so too must the DeDuplicator 21/07/2014
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ Today a big change was merged into Heritrix master that substantially alters how 3rd party tools (like this one)
+ interact with Heritrix and its notion of duplicates/revisits.
+
+ This change is entirely beneficial and will allow the next version of the DeDuplicator to properly implement 
+ duplicate detection between different URLs.
+
+ Consequently, we are now releasing 3.0.0 of the DeDuplicator. This works with Heritrix 3.0.0-3.2.0. Future versions
+ will be built using the new revisit API in Heritrix and will not work with Heritrix 3.2.0 or older.
+ 
+ For those useing SNAPSHOT builds of Heritrix, the actual API change was introduced on 21.07.2014 so you'll need the
+ DeDuplicator 3.0.0 for builds made before then. Builds made after 21.07.2014 will require the upcoming 3.1.0 version. 
+
 
 ** DeDuplicator for Heritrix 3 source now on GitHub - 29/05/2012
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

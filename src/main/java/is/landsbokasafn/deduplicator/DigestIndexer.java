@@ -34,10 +34,7 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriter.MaxFieldLength;
-import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.IndexOutput;
-import org.apache.lucene.store.LockFactory;
 import org.archive.util.ArchiveUtils;
 
 /**
@@ -55,7 +52,9 @@ import org.archive.util.ArchiveUtils;
 public class DigestIndexer {
 	
     // Lucene index field names
-    /** The URL **/
+    /** The URL 
+     *  This value is suitable for use in warc/revist records as the WARC-Refers-To-Target-URI
+     **/
 	public static final String FIELD_URL = "url";
     /** The content digest as String **/
 	public static final String FIELD_DIGEST = "digest";
@@ -72,6 +71,8 @@ public class DigestIndexer {
     /** A field containing meta-data on where the original version of a
      *  document is stored. */
     public static final String FIELD_ORIGIN = "origin";
+    /** The date of the original payload capture. Suitable for WARC-Refers-To-Date in warc/revisit records */
+    public static final String FIELD_ORIGINAL_DATE="original-date";
 
     // Indexing modes (by url, by hash or both)
     /** Index URL enabling lookups by URL. If normalized URLs are included
