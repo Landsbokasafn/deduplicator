@@ -5,7 +5,7 @@
   <groupId>is.landsbokasafn</groupId>
   <artifactId>deduplicator</artifactId>
   <name>DeDuplicator3 (Heritrix 3 add-on module)</name>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>3.0.0</version>
   <description>
         An add-on module for the web crawler Heritrix 3 that offers a
         means to reduce the amount of duplicate data collected in a
@@ -18,9 +18,9 @@
   </issueManagement>
   <developers>
     <developer>
-      <id>Kristinn</id>
       <name>Kristinn Sigurðsson</name>
-      <email>kristsi at bok.hi.is</email>
+      <email>kristinn at landsbokasafn.is</email>
+      <url>https://github.com/kris-sigur</url>
       <organization>National and University Library of Iceland</organization>
       <roles>
         <role>Developer</role>
@@ -48,7 +48,7 @@
   </contributors>
   <scm>
     <connection>scm:git://github.com/Landsbokasafn/deduplicator.git</connection>
-    <developerConnection>scm:https://kris-sigur@github.com/Landsbokasafn/deduplicator.git</developerConnection>
+    <developerConnection>scm:https://github.com/Landsbokasafn/deduplicator.git</developerConnection>
     <url>https://github.com/Landsbokasafn/deduplicator</url>
   </scm>
   <organization>
@@ -57,6 +57,7 @@
   </organization>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <org.archive.heritrix.version>3.2.0</org.archive.heritrix.version>   
   </properties>
   <build>
     <finalName>${project.artifactId}-${project.version}-${buildNumber}</finalName>
@@ -118,7 +119,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-site-plugin</artifactId>
-        <version>3.3</version>
+        <version>3.2</version>
         <configuration>
           <locales>en</locales>
         </configuration>
@@ -135,19 +136,19 @@
     <dependency>
       <groupId>org.archive.heritrix</groupId>
       <artifactId>heritrix-commons</artifactId>
-      <version>3.1.2-SNAPSHOT</version>
+      <version>${org.archive.heritrix.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.archive.heritrix</groupId>
       <artifactId>heritrix-modules</artifactId>
-      <version>3.1.2-SNAPSHOT</version>
+      <version>${org.archive.heritrix.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.archive.heritrix</groupId>
       <artifactId>heritrix-engine</artifactId>
-      <version>3.1.2-SNAPSHOT</version>
+      <version>${org.archive.heritrix.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -168,13 +169,6 @@
       </plugin>
     </plugins>
   </reporting>
-  <distributionManagement>
-    <site>
-      <id>website</id>
-      <url>scp://deduplicator.sourceforge.net/home/groups/d/de/deduplicator/htdocs/</url>
-    </site>
-  </distributionManagement>
-
 
   <repositories>
   

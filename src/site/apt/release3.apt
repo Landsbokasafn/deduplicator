@@ -5,6 +5,28 @@ Release History - DeDuplicator for Heritrix 3
   {{{./release.html}here}}.   
   
   There are no stable releases of DeDuplicator for Heritrix 3. The current SNAPSHOT build is believed stable.
+
+* {3.0.0} (Stable)
+~~~~~~~~~~~~~~~~~~
+
+  * {{{http://landsbokasafn.github.io/SNAPSHOTS/deduplicator-3.0.0-dist.tar.gz}deduplicator-3.0.0-dist.tar.gz}}
+  
+  * {{{http://landsbokasafn.github.io/SNAPSHOTS/deduplicator-3.0.0-dist.zip}deduplicator-3.0.0-dist.zip}}
+  
+  * {{{http://landsbokasafn.github.io/SNAPSHOTS/deduplicator-3.0.0-src.tar.gz}deduplicator-3.0.0-src.tar.gz}}
+  
+  * {{{http://landsbokasafn.github.io/SNAPSHOTS/deduplicator-3.0.0-src.zip}deduplicator-3.0.0-src.zip}}
+
+ This release is compatible with Heritrix 3.0.0-3.2.0. It is also mostly compatible with Heritrix 3.3.0-SNAPSHOT builds
+ created before July 21st 2014.
+ 
+ Heritrix 3.3.0 changes greatly how the WarcWriterProcessor and statistics trackers handle duplicates. This is mostly 
+ a good thing, but it does mean that the DeDuplicator will need to be updated and users will need to make sure to
+ use a version of the DeDuplicator that is compatible with their version of Heritrix.
+ 
+ This stable release is built against Heritrix 3.2.0, but is essentially the same as the 20131122 snapshot build 
+ against Heritrix 3.1.0-RC1 that is available below.
+
   
 * {3.0.0-SNAPSHOT-20131122} 
 ~~~~~~~~~~~~~~~~~~
