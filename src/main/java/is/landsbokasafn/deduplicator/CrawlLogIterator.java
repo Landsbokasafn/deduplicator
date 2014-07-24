@@ -27,8 +27,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.NoSuchElementException;
 
 /**
@@ -39,18 +37,6 @@ import java.util.NoSuchElementException;
  * @author Lars Clausen
  */
 public class CrawlLogIterator extends CrawlDataIterator {
-
-	/**
-	 * The date format used in crawl.log files.
-	 */
-    protected final SimpleDateFormat crawlDateFormat = 
-        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-    /**
-     * The date format specified by the {@link CrawlDataItem} for dates 
-     * entered into it (and eventually into the index)
-     */
-    protected final SimpleDateFormat crawlDataItemFormat = 
-    	new SimpleDateFormat(CrawlDataItem.dateFormat);
 
     /** 
      * A reader for the crawl.log file being processed
@@ -150,18 +136,12 @@ public class CrawlLogIterator extends CrawlDataIterator {
             
             // Index 0: Timestamp 
             String timestamp;
-            try {
-                // Convert from crawl.log format to the format specified by
-                // CrawlDataItem
-                timestamp = crawlDataItemFormat.format(
-                        crawlDateFormat.parse(lineParts[0]));
-            } catch (ParseException e) {
-                System.err.println("Error parsing date for: " + line);
-                e.printStackTrace();
-                return null;
-            }
+            // Crawl logs use the same date format as specified by the WARC standard for WARC-Date, w3c-iso8601
+            timestamp = lineParts[0];
             
-            // Index 1: status return code (ignore)
+            // Index 1: status return code 
+            int status = Integer.parseInt(lineParts[1]);
+            
             // Index 2: File size 
             long size = -1;
             if (lineParts[2].equals("-")) {
@@ -199,33 +179,35 @@ public class CrawlLogIterator extends CrawlDataIterator {
             // Index 10: Source tag (ignore)
             
             // Index 11: Annotations (may be missing)
-            String origin = null;
-            boolean duplicate = false;
+            boolean revisit = false;
             if(lineParts.length==12){
-                // Have an annotation field. Look for origin inside it.
-                // Origin can be found in the 'annotations' field, preceeded by
-                // 'deduplicate:' (no quotes) and contained within a pair of 
-                // double quotes. Example: deduplicate:"origin". 
-                // Can very possibly be missing.
+                // Have an annotation field. Look for original URL+Timestamp inside it.
+                // Can be found in the 'annotations' field, preceded by
+                // 'revisitOf:' (no quotes) and contained within a pair of 
+                // double quotes. Example: revisit:"TIMESTAMP URL". 
+                // May also just be a timestamp or missing altogether. Timestamp will use same 
+            	// format as the timestamp at the front of the crawl log (part 0)
+            	// If this information is provided, use that in lieu of 0 and 3 and DO NOT mark as revisit
+            	
+            	// TODO: FIGURE OUT THIS PART!!!!!
                 String annotation = lineParts[11];
     
-                int startIndex = annotation.indexOf("duplicate:\"");
+                int startIndex = annotation.indexOf("revisitOf:\"");
                 if(startIndex >= 0){
                     // The annotation field contains origin info. Extract it.
-                    startIndex += 11; // Skip over the ]deduplicate:"' part
+                    startIndex += 10; // Skip over the 'revisitOf:"' part
                     int endIndex = annotation.indexOf('"',startIndex+1);
-                    origin = annotation.substring(startIndex,endIndex);
                     // That also means this is a duplicate of an URL from an 
                     // earlier crawl
-                    duplicate=true;
-                } else if(annotation.contains("duplicate")){
+                    revisit=true;
+                } else if(annotation.contains("warcRevisit")){
                 	// Is a duplicate of an URL from an earlier crawl but
                 	// no origin information was recorded
-                	duplicate=true;
+                	revisit=true;
                 }
             }
             // Got a valid item.
-            return new CrawlDataItem(url, digest, timestamp, null, mime, origin, duplicate, size);
+            return new CrawlDataItem(url, digest, timestamp, null, mime, revisit, size, status, null);
         } 
         return null;
     }

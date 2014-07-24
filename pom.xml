@@ -57,7 +57,7 @@
   </organization>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <org.archive.heritrix.version>3.2.0</org.archive.heritrix.version>   
+    <org.archive.heritrix.version>3.3.0-SNAPSHOT</org.archive.heritrix.version>   
   </properties>
   <build>
     <finalName>${project.artifactId}-${project.version}-${buildNumber}</finalName>

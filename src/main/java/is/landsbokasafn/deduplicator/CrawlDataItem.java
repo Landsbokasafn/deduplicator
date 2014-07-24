@@ -31,33 +31,23 @@ package is.landsbokasafn.deduplicator;
  */
 public class CrawlDataItem {
     
-    /**
-     * The proper formating of {@link #setURL(String)} and {@link #getURL()}
-     */
-	public static final String dateFormat = "yyyyMMddHHmmssSSS";
-    
     protected String URL;
-    protected String statusCode;
+    protected int statusCode;
     protected String contentDigest;
     protected String timestamp;
     protected String etag;
-    protected String mimetype;
-    protected String origin;
-    protected boolean duplicate;
+    protected String mimeType;
+    protected boolean revisit;
     protected long size;
+    protected String warcRecordId;
     
     /**
      * Constructor. Creates a new CrawlDataItem with all its data initialized
      * to null.
      */
     public CrawlDataItem(){
-        URL = null;
-        contentDigest = null;
-        timestamp = null;
-        etag = null;
-        mimetype = null;
-        origin = null;
-        duplicate = false;
+    	revisit=false;
+    	statusCode=0;
         size = -1;
     }
     
@@ -70,22 +60,23 @@ public class CrawlDataItem {
      * @param timestamp Date of when the content digest was valid for that URL. 
      *                  Format: yyyyMMddHHmmssSSS
      * @param etag Etag for the URL
-     * @param mimetype MIME type of the document found at the URL
+     * @param mimeType MIME type of the document found at the URL
      * @param origin The origin of the CrawlDataItem (the exact meaning of the
      *               origin is outside the scope of this class and it may be
      *               any String value)
-     * @param duplicate True if this CrawlDataItem was marked as duplicate
+     * @param revisit True if this CrawlDataItem was marked as duplicate
      */
-    public CrawlDataItem(String URL, String contentDigest, String timestamp,
-            String etag, String mimetype, String origin, boolean duplicate, long size){
+    public CrawlDataItem(String URL, String contentDigest, String timestamp, String etag, String mimeType, 
+    		boolean revisit, long size, int statusCode, String warcRecordId){
         this.URL = URL;
         this.contentDigest = contentDigest;
         this.timestamp = timestamp;
         this.etag = etag;
-        this.mimetype = mimetype;
-        this.origin = origin;
-        this.duplicate = duplicate;
+        this.mimeType = mimeType;
+        this.revisit = revisit;
         this.size = size;
+        this.statusCode = statusCode;
+        this.warcRecordId = warcRecordId;
     }
     
     /**
@@ -121,8 +112,8 @@ public class CrawlDataItem {
     }
     
     /**
-     * Returns a timestamp for when the URL was fetched in the format:
-     * yyyyMMddHHmmssSSS
+     * Returns a timestamp for when the URL was fetched in the format consistent with WARC-Date,  w3c-iso8601
+     * <p><pre>YYYY-MM-DDThh:mm:ssZ</pre></p>
      * @return the time of the URLs fetching
      */
     public String getTimestamp(){
@@ -131,8 +122,8 @@ public class CrawlDataItem {
     
     /**
      * Set a new timestamp.
-     * @param timestamp The new timestamp. It should be in the format:
-     *                  yyyyMMddHHmmssSSS
+     * @param timestamp The new timestamp. It should be in the format specified for WARC-Date, w3c-iso8601:
+     *                  YYYY-MM-DDThh:mm:ssZ
      */
     public void setTimestamp(String timestamp){
         this.timestamp = timestamp;
@@ -161,47 +152,31 @@ public class CrawlDataItem {
      * @return the mimetype.
      */
     public String getMimeType(){
-        return mimetype;
+        return mimeType;
     }
     
     /**
      * Set new MIME type.
-     * @param mimetype The new MIME type
+     * @param mimeType The new MIME type
      */
-    public void setMimeType(String mimetype){
-        this.mimetype = mimetype;
+    public void setMimeType(String mimeType){
+        this.mimeType = mimeType;
     }
 
     /**
-     * Returns the "origin" that was associated with the document. 
-     * @return the origin (may be null if none was provided for the document)
+     * Returns whether the CrawlDataItem represents a revisit
+     * @return true if revisit, false otherwise
      */
-    public String getOrigin() {
-        return origin;
+    public boolean isRevisit() {
+        return revisit;
     }
     
     /**
-     * Set new origin
-     * @param origin A new origin.
+     * Set whether revisit or not.
+     * @param revisit true if revisit, false otherwise
      */
-    public void setOrigin(String origin){
-        this.origin = origin;
-    }
-    
-    /**
-     * Returns whether the CrawlDataItem was marked as duplicate.
-     * @return true if duplicate, false otherwise
-     */
-    public boolean isDuplicate() {
-        return duplicate;
-    }
-    
-    /**
-     * Set whether duplicate or not.
-     * @param duplicate true if duplicate, false otherwise
-     */
-    public void setDuplicate(boolean duplicate) {
-        this.duplicate = duplicate;
+    public void setRevisit(boolean revisit) {
+        this.revisit = revisit;
     }
 
     /**
@@ -220,4 +195,47 @@ public class CrawlDataItem {
 		this.size = size;
 	}
 
+	/**
+	 * Get the HTTP (or Heritrix if 0 or smaller) status code associated with the item
+	 * @return
+	 */
+	public int getStatusCode() {
+		return statusCode;
+	}
+
+	public void setStatusCode(int statusCode) {
+		this.statusCode = statusCode;
+	}
+
+	public String getWarcRecordId() {
+		return warcRecordId;
+	}
+
+	public void setWarcRecordId(String warcRecordId) {
+		this.warcRecordId = warcRecordId;
+	}
+
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("URL: ");
+		sb.append(URL);
+		sb.append("Timestamp: ");
+		sb.append(timestamp);
+		sb.append("\nDigest: ");
+		sb.append(contentDigest);
+		sb.append("\nMimeType: ");
+		sb.append(mimeType);
+		sb.append("\nRevisit: ");
+		sb.append(revisit);
+		sb.append("\nSize: ");
+		sb.append(size);
+		sb.append("\nStatusCode: ");
+		sb.append(statusCode);
+		sb.append("\nE-Tag: ");
+		sb.append(etag);
+		sb.append("\nWARC Record-ID:");
+		sb.append(warcRecordId);
+		
+		return sb.toString();
+	}
 }

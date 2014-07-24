@@ -58,21 +58,16 @@ public class DigestIndexer {
 	public static final String FIELD_URL = "url";
     /** The content digest as String **/
 	public static final String FIELD_DIGEST = "digest";
-    /** The URLs timestamp (time of fetch). The exact nature of this time
-     *  may vary slightly depending on the source (i.e. crawl.log and ARCs 
-     *  contain slightly different times but both indicate roughly when the 
-     *  document was obtained. The time is encoded as a String with the 
-     *  Java date format yyyyMMddHHmmssSSS  */
+    /** The URLs timestamp (time of fetch). Suitable for use in WARC-Refers-To-Date. Encoded according to
+     *  w3c-iso8601  
+     */
     public static final String FIELD_TIMESTAMP = "date";
     /** The document's etag **/
     public static final String FIELD_ETAG = "etag";
-    /** A stripped (normalized) version of the URL **/
+    /** A stripped (canonicalized) version of the URL **/
 	public static final String FIELD_URL_NORMALIZED = "url-normalized";
-    /** A field containing meta-data on where the original version of a
-     *  document is stored. */
-    public static final String FIELD_ORIGIN = "origin";
-    /** The date of the original payload capture. Suitable for WARC-Refers-To-Date in warc/revisit records */
-    public static final String FIELD_ORIGINAL_DATE="original-date";
+    /** WARC Record ID of original payload capture. Suitable for WARC-Refers-To field. **/
+    public static final String FIELD_ORIGINAL_RECORD_ID="warc-record-id";
 
     // Indexing modes (by url, by hash or both)
     /** Index URL enabling lookups by URL. If normalized URLs are included
@@ -173,7 +168,7 @@ public class DigestIndexer {
      * CrawlDataIterators until {@link #close(boolean)} has been called.
      * 
      * @param dataIt The CrawlDataIterator that provides the data to index.
-     * @param mimefilter A regular expression that is used as a filter on the 
+     * @param mimeFilter A regular expression that is used as a filter on the 
      *                   mimetypes to include in the index. 
      * @param blacklist If true then the <code>mimefilter</code> is used
      *                  as a blacklist for mimetypes. If false then the
@@ -192,7 +187,7 @@ public class DigestIndexer {
      */
     public long writeToIndex(
             CrawlDataIterator dataIt, 
-            String mimefilter, 
+            String mimeFilter, 
             boolean blacklist,
             String defaultOrigin,            
             boolean verbose,
@@ -204,8 +199,8 @@ public class DigestIndexer {
         int skipped = 0;
         while (dataIt.hasNext()) {
             CrawlDataItem item = dataIt.next();
-            if (	!(skipDuplicates && item.duplicate) &&				// Check for duplicates
-                    item.mimetype.matches(mimefilter) != blacklist &&   // Apply mime-filter 
+            if (	!(skipDuplicates && item.revisit) &&				// Check for duplicates
+                    item.getMimeType().matches(mimeFilter) != blacklist &&   // Apply mime-filter 
                     (item.size==-1 || item.size > minSize)) {           // Apply size filter
                 // Ok, we wish to index this URL/Digest
                 count++;
@@ -216,6 +211,10 @@ public class DigestIndexer {
                 Document doc = new Document();
 
                 // Add URL to document.
+                if (item.getURL().contains("\"")) {
+                	throw new IllegalStateException("Double quotes in URLs should always be properly escaped. " 
+                			+ item.getURL());
+                }
                 doc.add(new Field(
                         FIELD_URL,
                         item.getURL(),
@@ -259,19 +258,6 @@ public class DigestIndexer {
                             Field.Index.NO
                             ));
                 }
-                // Set origin
-                if(defaultOrigin!=null){
-                    String tmp = item.getOrigin();
-                    if(tmp==null){
-                        tmp = defaultOrigin;
-                    }
-                    doc.add(new Field(
-                            FIELD_ORIGIN,
-                            tmp,
-                            Field.Store.YES,
-                            Field.Index.NO
-                            ));
-                }
                 index.addDocument(doc);
             } else {
                 skipped++;
@@ -307,6 +293,7 @@ public class DigestIndexer {
 	 * @param url The url to strip
 	 * @return A normalized URL.
 	 */
+    // TODO: Use URL canonicalizer in place of this crude thing
 	public static String stripURL(String url){
 		String strippedUrl = url.replaceAll("www[0-9]*\\.","");
 		strippedUrl = url.replaceAll("\\?.*$","");
@@ -315,7 +302,7 @@ public class DigestIndexer {
 	}
     
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked","rawtypes"})
 	public static void main(String[] args) throws Exception {
         CommandLineParser clp = 
             new CommandLineParser(args,new PrintWriter(System.out));
