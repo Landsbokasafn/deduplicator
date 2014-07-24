@@ -27,6 +27,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.NoSuchElementException;
 
 /**
@@ -37,6 +39,9 @@ import java.util.NoSuchElementException;
  * @author Lars Clausen
  */
 public class CrawlLogIterator extends CrawlDataIterator {
+
+	
+    private SimpleDateFormat sdfIso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     /** 
      * A reader for the crawl.log file being processed
@@ -94,8 +99,7 @@ public class CrawlLogIterator extends CrawlDataIterator {
     }
 
     /**
-     * Ready the next item.  This method will skip over items that
-     * getNextItem() rejects.  When the method returns, either next is non-null
+     * Ready the next item.  When the method returns, either next is non-null
      * or there are no more items in the crawl log.
      * <p>
      * Note: This method should only be called when <code>next==null<code>
@@ -142,18 +146,7 @@ public class CrawlLogIterator extends CrawlDataIterator {
             // Index 1: status return code 
             int status = Integer.parseInt(lineParts[1]);
             
-            // Index 2: File size 
-            long size = -1;
-            if (lineParts[2].equals("-")) {
-            	// If size is missing then this URL was not successfully visited. Skip in index
-            	return null;
-            }
-            try {
-            	size = Long.parseLong(lineParts[2]);
-            } catch (NumberFormatException e) {
-                System.err.println("Error parsing size for: " + line + 
-                		" Item: " + lineParts[2] + " Message: " + e.getMessage());
-            }
+            // Index 2: File size (ignore) 
 
             // Index 3: URL
             String url = lineParts[3];
@@ -180,34 +173,65 @@ public class CrawlLogIterator extends CrawlDataIterator {
             
             // Index 11: Annotations (may be missing)
             boolean revisit = false;
+            String originalURL = null;
+            String originalTimestamp = null;
             if(lineParts.length==12){
                 // Have an annotation field. Look for original URL+Timestamp inside it.
                 // Can be found in the 'annotations' field, preceded by
                 // 'revisitOf:' (no quotes) and contained within a pair of 
                 // double quotes. Example: revisit:"TIMESTAMP URL". 
                 // May also just be a timestamp or missing altogether. Timestamp will use same 
-            	// format as the timestamp at the front of the crawl log (part 0)
+            	// format as the timestamp at the front of the crawl log (part 0), e.g. w3c-iso8601
             	// If this information is provided, use that in lieu of 0 and 3 and DO NOT mark as revisit
             	
-            	// TODO: FIGURE OUT THIS PART!!!!!
                 String annotation = lineParts[11];
     
                 int startIndex = annotation.indexOf("revisitOf:\"");
                 if(startIndex >= 0){
-                    // The annotation field contains origin info. Extract it.
+                    // The annotation field contains revisit of info. Extract it.
                     startIndex += 10; // Skip over the 'revisitOf:"' part
                     int endIndex = annotation.indexOf('"',startIndex+1);
-                    // That also means this is a duplicate of an URL from an 
-                    // earlier crawl
-                    revisit=true;
+                    String revisitOf = annotation.substring(startIndex,endIndex);
+
+                    
+                    // The w3c-iso8601 requires exactly 24 characters
+                    if (revisitOf.length()<24 || revisitOf.length()==25) {
+                    	throw new IllegalStateException("revisitOf annotation field invalid: " + annotation);
+                    } else if (revisitOf.length()==24 ||
+                    		(revisitOf.length()==26 && revisitOf.charAt(25)=='-')) {
+                    	// Just the timestamp
+                    	originalTimestamp = revisitOf;
+                    } else {
+                    	originalTimestamp = revisitOf.substring(0,23);
+                    	originalURL = revisitOf.substring(25);
+                    }
+                    
+                    // A little sanity checking ...
+                    // TODO: Shouldn't this be done in DigestIndexer?
+                    try {
+						sdfIso8601.parse(originalTimestamp);
+					} catch (ParseException e) {
+						throw new IllegalStateException("Timestamp in annotation does not conform to w3c-iso8601 "
+								+ "in line: " + line, e);
+					}
+                    
                 } else if(annotation.contains("warcRevisit")){
                 	// Is a duplicate of an URL from an earlier crawl but
-                	// no origin information was recorded
+                	// no information is available about the original capture
                 	revisit=true;
                 }
             }
             // Got a valid item.
-            return new CrawlDataItem(url, digest, timestamp, null, mime, revisit, size, status, null);
+            CrawlDataItem cdi = new CrawlDataItem();
+            cdi.setURL(url);
+            cdi.setOriginalURL(originalURL);
+            cdi.setContentDigest(digest);
+            cdi.setTimestamp(timestamp);
+            cdi.setOriginalTimestamp(originalTimestamp);
+            cdi.setMimeType(mime);
+            cdi.setRevisit(revisit);
+            cdi.setStatusCode(status);
+            return cdi;
         } 
         return null;
     }

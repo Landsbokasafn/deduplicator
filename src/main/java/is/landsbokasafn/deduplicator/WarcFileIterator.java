@@ -1,7 +1,5 @@
 package is.landsbokasafn.deduplicator;
 
-import static org.archive.format.warc.WARCConstants.WARCRecordType;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -11,9 +9,9 @@ import org.apache.commons.httpclient.HttpParser;
 import org.apache.commons.httpclient.StatusLine;
 import org.apache.commons.httpclient.util.EncodingUtil;
 import org.archive.format.warc.WARCConstants;
+import org.archive.format.warc.WARCConstants.WARCRecordType;
 import org.archive.io.ArchiveRecord;
 import org.archive.io.ArchiveRecordHeader;
-import org.archive.io.RecoverableIOException;
 import org.archive.io.warc.WARCReader;
 import org.archive.io.warc.WARCReaderFactory;
 import org.archive.io.warc.WARCRecord;
@@ -85,10 +83,10 @@ public class WarcFileIterator extends CrawlDataIterator {
 	private CrawlDataItem processResponse(WARCRecord record, ArchiveRecordHeader header) throws IOException {
 		CrawlDataItem cdi = new CrawlDataItem();
 		cdi.setURL(header.getUrl());
-		cdi.setContentDigest(header.getDigest());
+		cdi.setContentDigest((String)header.getHeaderValue(WARCConstants.HEADER_KEY_PAYLOAD_DIGEST));
 		cdi.setRevisit(false);
-		cdi.setSize(header.getContentLength());
 		cdi.setTimestamp(header.getDate());
+		cdi.setWarcRecordId(header.getRecordIdentifier());
 		
 		// Process the HTTP header, if any
         byte [] statusBytes = HttpParser.readRawLine(record);
@@ -114,9 +112,14 @@ public class WarcFileIterator extends CrawlDataIterator {
 		return cdi;
 	}
 	
-	private CrawlDataItem processRevisit(WARCRecord record, ArchiveRecordHeader header) {
-		// TODO Auto-generated method stub
-		return null;
+	private CrawlDataItem processRevisit(WARCRecord record, ArchiveRecordHeader header) throws IOException{
+		CrawlDataItem cdi = processResponse(record, header);
+		cdi.setOriginalURL((String)header.getHeaderValue(WARCConstants.HEADER_KEY_REFERS_TO_TARGET_URI));
+		cdi.setOriginalTimestamp((String)header.getHeaderValue(WARCConstants.HEADER_KEY_REFERS_TO_DATE));
+		
+		cdi.setRevisit(true);
+		
+		return cdi;
 	}
 
 	

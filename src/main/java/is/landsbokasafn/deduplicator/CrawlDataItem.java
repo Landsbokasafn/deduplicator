@@ -32,13 +32,14 @@ package is.landsbokasafn.deduplicator;
 public class CrawlDataItem {
     
     protected String URL;
+    protected String originalURL;
     protected int statusCode;
     protected String contentDigest;
     protected String timestamp;
+    protected String originalTimestamp;
     protected String etag;
     protected String mimeType;
     protected boolean revisit;
-    protected long size;
     protected String warcRecordId;
     
     /**
@@ -48,35 +49,6 @@ public class CrawlDataItem {
     public CrawlDataItem(){
     	revisit=false;
     	statusCode=0;
-        size = -1;
-    }
-    
-    /**
-     * Constructor. Creates a new CrawlDataItem with all its data initialized
-     * via the constructor.
-     * 
-     * @param URL The URL for this CrawlDataItem
-     * @param contentDigest A content digest of the document found at the URL
-     * @param timestamp Date of when the content digest was valid for that URL. 
-     *                  Format: yyyyMMddHHmmssSSS
-     * @param etag Etag for the URL
-     * @param mimeType MIME type of the document found at the URL
-     * @param origin The origin of the CrawlDataItem (the exact meaning of the
-     *               origin is outside the scope of this class and it may be
-     *               any String value)
-     * @param revisit True if this CrawlDataItem was marked as duplicate
-     */
-    public CrawlDataItem(String URL, String contentDigest, String timestamp, String etag, String mimeType, 
-    		boolean revisit, long size, int statusCode, String warcRecordId){
-        this.URL = URL;
-        this.contentDigest = contentDigest;
-        this.timestamp = timestamp;
-        this.etag = etag;
-        this.mimeType = mimeType;
-        this.revisit = revisit;
-        this.size = size;
-        this.statusCode = statusCode;
-        this.warcRecordId = warcRecordId;
     }
     
     /**
@@ -179,22 +151,6 @@ public class CrawlDataItem {
         this.revisit = revisit;
     }
 
-    /**
-     * Get the size of the CrawlDataItem. 
-     * @return The size or -1 if the size could not be determined.
-     */
-	public long getSize() {
-		return size;
-	}
-
-	/**
-	 * Set the size of the CrawlDataItem
-	 * @param size The size or -1 if the size is indeterminate
-	 */
-	public void setSize(long size) {
-		this.size = size;
-	}
-
 	/**
 	 * Get the HTTP (or Heritrix if 0 or smaller) status code associated with the item
 	 * @return
@@ -214,26 +170,44 @@ public class CrawlDataItem {
 	public void setWarcRecordId(String warcRecordId) {
 		this.warcRecordId = warcRecordId;
 	}
+	
+	public String getOriginalURL() {
+		return originalURL;
+	}
+
+	public void setOriginalURL(String originalURL) {
+		this.originalURL = originalURL;
+	}
+
+	public String getOriginalTimestamp() {
+		return originalTimestamp;
+	}
+
+	public void setOriginalTimestamp(String originalTimestamp) {
+		this.originalTimestamp = originalTimestamp;
+	}
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("URL: ");
 		sb.append(URL);
-		sb.append("Timestamp: ");
+		sb.append("\nOriginal URL: ");
+		sb.append(originalURL);
+		sb.append("\nTimestamp: ");
 		sb.append(timestamp);
+		sb.append("\nOriginal timestamp: ");
+		sb.append(originalTimestamp);
 		sb.append("\nDigest: ");
 		sb.append(contentDigest);
 		sb.append("\nMimeType: ");
 		sb.append(mimeType);
 		sb.append("\nRevisit: ");
 		sb.append(revisit);
-		sb.append("\nSize: ");
-		sb.append(size);
 		sb.append("\nStatusCode: ");
 		sb.append(statusCode);
 		sb.append("\nE-Tag: ");
 		sb.append(etag);
-		sb.append("\nWARC Record-ID:");
+		sb.append("\nWARC Record-ID: ");
 		sb.append(warcRecordId);
 		
 		return sb.toString();

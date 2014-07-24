@@ -158,7 +158,7 @@ public class DigestIndexer {
             String defaultOrigin,            
             boolean verbose) 
             throws IOException {
-        return writeToIndex(dataIt, mimefilter, blacklist, defaultOrigin, verbose, false, -1);
+        return writeToIndex(dataIt, mimefilter, blacklist, defaultOrigin, verbose, false);
     }
 
     /**
@@ -179,9 +179,6 @@ public class DigestIndexer {
      * @param verbose If true then progress information will be sent to 
      *                System.out.
      * @param skipDuplicates Do not add URLs that are marked as duplicates to the index
-     * @param minSize The minimum size of documents added to the index. Documents
-     *           smaller than this are ignored. Documents with unknown size (CrawlDataItem size set to -1)
-     *           are not subject to this limit. A value of lesser than or equal to zero disables this feature.
      * @return The number of items added to the index.
      * @throws IOException If an error occurs writing the index.
      */
@@ -191,17 +188,15 @@ public class DigestIndexer {
             boolean blacklist,
             String defaultOrigin,            
             boolean verbose,
-            boolean skipDuplicates,
-            long minSize) 
+            boolean skipDuplicates) 
             throws IOException {
 
         int count = 0;
         int skipped = 0;
         while (dataIt.hasNext()) {
             CrawlDataItem item = dataIt.next();
-            if (	!(skipDuplicates && item.revisit) &&				// Check for duplicates
-                    item.getMimeType().matches(mimeFilter) != blacklist &&   // Apply mime-filter 
-                    (item.size==-1 || item.size > minSize)) {           // Apply size filter
+            if (	!(skipDuplicates && item.revisit) &&				    // Check for duplicates
+                    item.getMimeType().matches(mimeFilter) != blacklist) {  // Apply mime-filter 
                 // Ok, we wish to index this URL/Digest
                 count++;
                 if(verbose && count%10000==0){
@@ -319,7 +314,6 @@ public class DigestIndexer {
         String iteratorClassName = CrawlLogIterator.class.getName();
         String origin = null;
         boolean skipDuplicates = false;
-        long size = -1;
 
         // Process the options
         Option[] opts = clp.getCommandLineOptions();
@@ -337,7 +331,6 @@ public class DigestIndexer {
             case 't' : timestamp = true; break;
             case 'r' : origin = opt.getValue(); break;
             case 'd' : skipDuplicates = true; break;
-            case 'l' : size = Long.parseLong(opt.getValue()); break;
             }
         }
         
@@ -381,7 +374,7 @@ public class DigestIndexer {
                 equivalent, timestamp,etag,addToIndex);
         
         // Create the index
-        di.writeToIndex(iterator, mimefilter, blacklist, origin, true, skipDuplicates, size);
+        di.writeToIndex(iterator, mimefilter, blacklist, origin, true, skipDuplicates);
         
         // Clean-up
         di.close(true);
