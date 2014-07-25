@@ -31,6 +31,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.NoSuchElementException;
 
+import org.archive.util.DateUtils;
+
 /**
  * An implementation of a  {@link is.hi.bok.deduplicator.CrawlDataIterator}
  * capable of iterating over a Heritrix's style <code>crawl.log</code>.
@@ -40,8 +42,10 @@ import java.util.NoSuchElementException;
  */
 public class CrawlLogIterator extends CrawlDataIterator {
 
-	
-    private SimpleDateFormat sdfIso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+	// Date format as specified for WARC-Date and WARC-Refers-To-Date
+    private SimpleDateFormat sdfWarc = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    // Date format as used in Heritrix crawl.log
+    private SimpleDateFormat sdfCrawlLog = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
     /** 
      * A reader for the crawl.log file being processed
@@ -125,7 +129,7 @@ public class CrawlLogIterator extends CrawlDataIterator {
      * @return A {@link CrawlDataItem} if the next line in the crawl log yielded 
      *         a usable item, null otherwise.
      */
-    protected CrawlDataItem parseLine(String line) {
+    protected CrawlDataItem parseLine(String line) throws IOException {
         if (line != null && line.length() > 42) {
             // Split the line up by whitespaces.
             // Limit to 12 parts (annotations may contain spaces, but will
@@ -140,8 +144,12 @@ public class CrawlLogIterator extends CrawlDataIterator {
             
             // Index 0: Timestamp 
             String timestamp;
-            // Crawl logs use the same date format as specified by the WARC standard for WARC-Date, w3c-iso8601
-            timestamp = lineParts[0];
+            // Convert from the crawl log dateformat to w3c-iso8601
+            try {
+				timestamp = sdfWarc.format(sdfCrawlLog.parse(lineParts[0]));
+			} catch (ParseException e1) {
+				throw new IOException(e1);
+			}
             
             // Index 1: status return code 
             int status = Integer.parseInt(lineParts[1]);
@@ -209,7 +217,7 @@ public class CrawlLogIterator extends CrawlDataIterator {
                     // A little sanity checking ...
                     // TODO: Shouldn't this be done in DigestIndexer?
                     try {
-						sdfIso8601.parse(originalTimestamp);
+						sdfWarc.parse(originalTimestamp);
 					} catch (ParseException e) {
 						throw new IllegalStateException("Timestamp in annotation does not conform to w3c-iso8601 "
 								+ "in line: " + line, e);
