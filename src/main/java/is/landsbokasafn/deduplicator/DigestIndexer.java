@@ -84,7 +84,6 @@ public class DigestIndexer {
     // The options with default settings
     boolean etag = false;
     boolean equivalent = false;
-    boolean timestamp = false;
     boolean indexURL = true;
     boolean indexDigest = true;
 
@@ -109,13 +108,11 @@ public class DigestIndexer {
             String indexLocation,
             String indexingMode,
             boolean includeNormalizedURL,
-            boolean includeTimestamp,
             boolean includeEtag,
             boolean addToExistingIndex) throws IOException{
         
         this.etag = includeEtag;
         this.equivalent = includeNormalizedURL;
-        this.timestamp = includeTimestamp;
         
         if(indexingMode.equals(MODE_URL)){
             indexDigest = false;
@@ -155,10 +152,9 @@ public class DigestIndexer {
             CrawlDataIterator dataIt, 
             String mimefilter, 
             boolean blacklist,
-            String defaultOrigin,            
             boolean verbose) 
             throws IOException {
-        return writeToIndex(dataIt, mimefilter, blacklist, defaultOrigin, verbose, false);
+        return writeToIndex(dataIt, mimefilter, blacklist, verbose, false);
     }
 
     /**
@@ -186,7 +182,6 @@ public class DigestIndexer {
             CrawlDataIterator dataIt, 
             String mimeFilter, 
             boolean blacklist,
-            String defaultOrigin,            
             boolean verbose,
             boolean skipDuplicates) 
             throws IOException {
@@ -195,7 +190,8 @@ public class DigestIndexer {
         int skipped = 0;
         while (dataIt.hasNext()) {
             CrawlDataItem item = dataIt.next();
-            if (	!(skipDuplicates && item.revisit) &&				    // Check for duplicates
+            if (	!(skipDuplicates && item.revisit) &&				    // Check for duplicates TODO: Look into this
+            		item.getStatusCode()==200 &&                            // Only index 200s
                     item.getMimeType().matches(mimeFilter) != blacklist) {  // Apply mime-filter 
                 // Ok, we wish to index this URL/Digest
                 count++;
@@ -235,15 +231,14 @@ public class DigestIndexer {
                                 Field.Index.NOT_ANALYZED : Field.Index.NO)
                         ));
                 
-                // Include timestamp?
-                if(timestamp){
-                    doc.add(new Field(
-                            FIELD_TIMESTAMP,
-                            item.getTimestamp(),
-                            Field.Store.YES,
-                            Field.Index.NO
-                            ));
-                }
+                // add timestamp?
+                doc.add(new Field(
+                        FIELD_TIMESTAMP,
+                        item.getTimestamp(),
+                        Field.Store.YES,
+                        Field.Index.NO
+                        ));
+
                 // Include etag?
                 if(etag && item.getEtag()!=null){
                     doc.add(new Field(
@@ -306,13 +301,11 @@ public class DigestIndexer {
         // Set default values for all settings.
         boolean etag = false;
         boolean equivalent = false;
-        boolean timestamp = false;
         String indexMode = MODE_BOTH;
         boolean addToIndex = false;
         String mimefilter = "^text/.*";
         boolean blacklist = true;
         String iteratorClassName = CrawlLogIterator.class.getName();
-        String origin = null;
         boolean skipDuplicates = false;
 
         // Process the options
@@ -328,8 +321,6 @@ public class DigestIndexer {
             case 'm' : mimefilter = opt.getValue(); break;
             case 'o' : indexMode = opt.getValue(); break;
             case 's' : equivalent = true; break;
-            case 't' : timestamp = true; break;
-            case 'r' : origin = opt.getValue(); break;
             case 'd' : skipDuplicates = true; break;
             }
         }
@@ -356,7 +347,6 @@ public class DigestIndexer {
                 " (" + (blacklist?"blacklist":"whitelist")+")");
         System.out.println(" - Includes" + 
                 (equivalent?" <equivalent URL>":"") +
-                (timestamp?" <timestamp>":"") +
                 (etag?" <etag>":""));
         System.out.println(" - Skip duplicates: " + 
                 (skipDuplicates?"yes":"no"));
@@ -371,10 +361,10 @@ public class DigestIndexer {
         }
         
         DigestIndexer di = new DigestIndexer((String)cargs.get(1),indexMode,
-                equivalent, timestamp,etag,addToIndex);
+                equivalent, etag,addToIndex);
         
         // Create the index
-        di.writeToIndex(iterator, mimefilter, blacklist, origin, true, skipDuplicates);
+        di.writeToIndex(iterator, mimefilter, blacklist, true, skipDuplicates);
         
         // Clean-up
         di.close(true);

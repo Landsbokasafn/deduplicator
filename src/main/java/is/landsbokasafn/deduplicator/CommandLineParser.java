@@ -82,9 +82,6 @@ public class CommandLineParser {
                 "Include a stripped URL in the index for equivalent URL " +
                 "matches."));
         
-        this.options.addOption(new Option("t","timestamp", false,
-                "Include the time of fetch in the index."));
-        
         this.options.addOption(new Option("e","etag", false,
         "Include etags in the index (if available in the source)."));
 
@@ -106,23 +103,10 @@ public class CommandLineParser {
         this.options.addOption(new Option("a","add", false,
             "Add source data to existing index."));
 
-        opt = new Option("r","origin", true,
-                "If set, the 'origin' of each URI will be added to the index." +
-                " If no origin is provided by the source data then the " +
-                "argument provided here will be used.");
-        opt.setArgName("origin");
-        this.options.addOption(opt);
-
         this.options.addOption(new Option("d","skip-duplicates", false,
                 "If set, URIs marked as duplicates will not be added to the " +
                 "index."));
         
-        opt = new Option("l","minsize", true,
-                "If set (with a value greather than zero), documents with a known size smaller than the " +
-                "value given here will be omitted from the index. Minimum size should be specified in bytes.");
-        opt.setArgName("minsize");
-        this.options.addOption(opt);
-
         PosixParser parser = new PosixParser();
         try {
             this.commandLine = parser.parse(this.options, args, false);
