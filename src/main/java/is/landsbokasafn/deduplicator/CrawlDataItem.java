@@ -41,6 +41,7 @@ public class CrawlDataItem {
     protected String mimeType;
     protected boolean revisit;
     protected String warcRecordId;
+    protected String revisitProfile;
     
     /**
      * Constructor. Creates a new CrawlDataItem with all its data initialized
@@ -124,7 +125,7 @@ public class CrawlDataItem {
      * @return the mimetype.
      */
     public String getMimeType(){
-        return mimeType;
+        return mimeType==null?"unknown":mimeType;
     }
     
     /**
@@ -186,6 +187,15 @@ public class CrawlDataItem {
 	public void setOriginalTimestamp(String originalTimestamp) {
 		this.originalTimestamp = originalTimestamp;
 	}
+	
+	
+	public String getRevisitProfile() {
+		return revisitProfile;
+	}
+
+	public void setRevisitProfile(String revisitProfile) {
+		this.revisitProfile = revisitProfile;
+	}
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -209,6 +219,8 @@ public class CrawlDataItem {
 		sb.append(etag);
 		sb.append("\nWARC Record-ID: ");
 		sb.append(warcRecordId);
+		sb.append("\nWARC Profile: ");
+		sb.append(revisitProfile);
 		
 		return sb.toString();
 	}
