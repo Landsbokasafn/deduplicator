@@ -2,6 +2,7 @@ package is.landsbokasafn.deduplicator;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,6 +27,7 @@ public class WarcIterator extends CrawlDataIterator {
 		}
 		warcFiles = new LinkedList<File>();
 		addWarcsInDir(baseDir);
+		Collections.sort(warcFiles);
 		fileIterator=warcFiles.iterator();
 		readNextItem();
 	}
@@ -81,8 +83,7 @@ public class WarcIterator extends CrawlDataIterator {
 
 	@Override
 	public String getSourceType() {
-		return "Iterator over all WARC (ISO-28500) files in a directory (recursive). "
-				+ "Iterates over http(s) response records only.";
+		return "Iterator over all WARC (ISO-28500) files in a directory (recursive).";
 	}
 
 }
