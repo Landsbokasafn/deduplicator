@@ -55,8 +55,6 @@ public class WarcFileIterator extends CrawlDataIterator {
 	        	continue;
 	        }
 	        
-	        // TODO: Consider if we should handle errors on resolving the type to an enum. It likely means
-	        //       a faulty WARC, but perhaps we want to just move on and log it.
 	        WARCRecordType type = WARCRecordType.valueOf(
 	        		header.getHeaderValue(WARCConstants.HEADER_KEY_TYPE).toString());
 	        
@@ -86,7 +84,7 @@ public class WarcFileIterator extends CrawlDataIterator {
 		cdi.setContentDigest((String)header.getHeaderValue(WARCConstants.HEADER_KEY_PAYLOAD_DIGEST));
 		cdi.setRevisit(false);
 		cdi.setTimestamp(header.getDate());
-		cdi.setWarcRecordId(header.getRecordIdentifier());
+		cdi.setWarcRecordId((String)header.getHeaderValue(WARCConstants.HEADER_KEY_ID));
 		
 		// Process the HTTP header, if any
         byte [] statusBytes = HttpParser.readRawLine(record);
@@ -99,9 +97,9 @@ public class WarcFileIterator extends CrawlDataIterator {
 	    		cdi.setStatusCode(status.getStatusCode());
 	    		Header[] headers = HttpParser.parseHeaders(record,WARCConstants.DEFAULT_ENCODING);
                 for (Header h : headers) {
-                    if (h.getName().equals("Content-Type")) {
+                	if (h.getName().equalsIgnoreCase("Content-Type")) {
                 		cdi.setMimeType(h.getValue());
-                    } else if (h.getName().equals("ETag")) {
+                	} else if (h.getName().equalsIgnoreCase("ETag")) {
                     	cdi.setEtag(h.getValue());
                     }
                 }
@@ -116,7 +114,12 @@ public class WarcFileIterator extends CrawlDataIterator {
 		CrawlDataItem cdi = processResponse(record, header);
 		cdi.setOriginalURL((String)header.getHeaderValue(WARCConstants.HEADER_KEY_REFERS_TO_TARGET_URI));
 		cdi.setOriginalTimestamp((String)header.getHeaderValue(WARCConstants.HEADER_KEY_REFERS_TO_DATE));
-		
+		cdi.setRevisitProfile((String)header.getHeaderValue(WARCConstants.HEADER_KEY_PROFILE));
+		if (!cdi.getRevisitProfile().equals(WARCConstants.PROFILE_REVISIT_NOT_MODIFIED)) {
+			// ETags are of questionable value in this scenario, null it out, if any
+			cdi.setEtag(null);
+		}
+
 		cdi.setRevisit(true);
 		
 		return cdi;
@@ -162,7 +165,7 @@ public class WarcFileIterator extends CrawlDataIterator {
 
 	@Override
 	public String getSourceType() {
-		return "Iterator over a single WARC (ISO-28500) file. Iterates over http(s) response records only.";
+		return "Iterator over a single WARC (ISO-28500) file.";
 	}
 
 }
