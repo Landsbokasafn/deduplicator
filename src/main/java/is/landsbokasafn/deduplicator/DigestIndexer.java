@@ -35,7 +35,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.store.FSDirectory;
-import org.archive.util.ArchiveUtils;
+import org.archive.util.DateUtils;
 
 /**
  * A class for building a de-duplication index.
@@ -190,6 +190,7 @@ public class DigestIndexer {
         int skipped = 0;
         while (dataIt.hasNext()) {
             CrawlDataItem item = dataIt.next();
+
             if (	!(skipDuplicates && item.revisit) &&				    // Check for duplicates TODO: Look into this
             		item.getStatusCode()==200 &&                            // Only index 200s
                     item.getMimeType().matches(mimeFilter) != blacklist) {  // Apply mime-filter 
@@ -294,8 +295,8 @@ public class DigestIndexer {
 
     @SuppressWarnings({"unchecked","rawtypes"})
 	public static void main(String[] args) throws Exception {
-        CommandLineParser clp = 
-            new CommandLineParser(args,new PrintWriter(System.out));
+        CommandLineParser clp = new CommandLineParser(args,new PrintWriter(System.out));
+        
         long start = System.currentTimeMillis();
 
         // Set default values for all settings.
@@ -305,7 +306,7 @@ public class DigestIndexer {
         boolean addToIndex = false;
         String mimefilter = "^text/.*";
         boolean blacklist = true;
-        String iteratorClassName = CrawlLogIterator.class.getName();
+        String iteratorClassName = WarcIterator.class.getName();
         boolean skipDuplicates = false;
 
         // Process the options
@@ -331,12 +332,11 @@ public class DigestIndexer {
             // Should be exactly two arguments. Source and target!
             clp.usage(0);
         }
-        
+
         // Get the CrawlDataIterator
         // Get the iterator classname or load default.
         Class cl = Class.forName(iteratorClassName);
-        Constructor co =
-            cl.getConstructor(new Class[] { String.class });
+        Constructor co = cl.getConstructor(new Class[] { String.class });
         CrawlDataIterator iterator = (CrawlDataIterator) co.newInstance(
                 new Object[] { (String)cargs.get(0) });
 
@@ -359,18 +359,16 @@ public class DigestIndexer {
             System.out.println(" - New index (erases any existing index at " +
                     "that location)");
         }
-        
+
+        // Create the index
         DigestIndexer di = new DigestIndexer((String)cargs.get(1),indexMode,
                 equivalent, etag,addToIndex);
-        
-        // Create the index
         di.writeToIndex(iterator, mimefilter, blacklist, true, skipDuplicates);
         
         // Clean-up
         di.close(true);
         
         System.out.println("Total run time: " + 
-        		ArchiveUtils.formatMillisecondsToConventional(
-                        System.currentTimeMillis()-start));
+        		DateUtils.formatMillisecondsToConventional(System.currentTimeMillis()-start));
     }
 }

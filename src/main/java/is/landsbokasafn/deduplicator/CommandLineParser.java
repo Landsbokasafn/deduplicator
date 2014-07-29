@@ -96,7 +96,7 @@ public class CommandLineParser {
         
         opt = new Option("i","iterator", true,
                 "An iterator suitable for the source data (default iterator " +
-                "works on Heritrix's crawl.log).");
+                "works WARC files).");
         opt.setArgName("classname");
         this.options.addOption(opt);
 
@@ -174,15 +174,11 @@ public class CommandLineParser {
                 new DigestHelpFormatter();
             formatter.printHelp(this.out, 80, NAME, "Options:", this.options,
                 1, 2, "Arguments:", false);
-            this.out.println(" source                     Data to iterate " +
-                    "over (typically a crawl.log). If");
-            this.out.println("                            using a non-standard " +
-                    "iterator, consult relevant.");
-            this.out.println("                            documentation");
-            this.out.println(" target                     Target directory " +
-                    "for index output. Directory need not");
-            this.out.println("                            exist, but " +
-                    "unless --add should be empty.");
+            this.out.println(" source                     Data to iterate over (typically a directory containing");
+            this.out.println("                            WARC files). If using a non-standard iterator, consult");
+            this.out.println("                            relevant documentation");
+            this.out.println(" target                     Target directory for index output. Directory need not");
+            this.out.println("                            exist, but unless --add should be empty.");
         }
 
         // Close printwriter so stream gets flushed.
