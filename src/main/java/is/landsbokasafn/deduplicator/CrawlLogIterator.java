@@ -31,8 +31,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.NoSuchElementException;
 
-import org.archive.util.DateUtils;
-
 /**
  * An implementation of a  {@link is.hi.bok.deduplicator.CrawlDataIterator}
  * capable of iterating over a Heritrix's style <code>crawl.log</code>.
