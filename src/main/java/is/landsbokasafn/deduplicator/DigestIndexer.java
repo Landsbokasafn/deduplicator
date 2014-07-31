@@ -33,9 +33,9 @@ import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.StringField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.archive.util.DateUtils;
@@ -211,57 +211,80 @@ public class DigestIndexer {
         while (dataIt.hasNext()) {
             CrawlDataItem item = dataIt.next();
 
-            if (	!(skipDuplicates && item.revisit) &&				    // Check for duplicates TODO: Look into this
-            		item.getStatusCode()==200 &&                            // Only index 200s
-                    item.getMimeType().matches(mimeFilter) != blacklist) {  // Apply mime-filter 
-                // Ok, we wish to index this URL/Digest
-                count++;
-                if(verbose && count%10000==0){
-                    System.out.println("Indexed " + count + " - Last URL " +
-                    		"from " + item.getTimestamp());
-                }
-                Document doc = new Document();
-
-                // Add URL to document.
-                if (item.getURL().contains("\"")) {
-                	throw new IllegalStateException("Double quotes in URLs should always be properly escaped. " 
-                			+ item.getURL());
-                }
-                
-                doc.add(new Field(
-                        FIELD_URL,
-                        item.getURL(),
-                        (indexURL ? ftIndexed : ftNotIndexed)));
-                if(equivalent){
-                    doc.add(new Field(
-                            FIELD_URL_NORMALIZED,
-                            stripURL(item.getURL()),
-                            (indexURL ? ftIndexed : ftNotIndexed)));
-                }
-
-                // Add digest to document
-                doc.add(new Field(
-                        FIELD_DIGEST,
-                        item.getContentDigest(),
-                        (indexDigest ? ftIndexed : ftNotIndexed)));
-                
-                // add timestamp
-                doc.add(new Field(
-                        FIELD_TIMESTAMP,
-                        item.getTimestamp(),
-                        ftNotIndexed));
-
-                // Include etag?
-                if(etag && item.getEtag()!=null){
-                    doc.add(new Field(
-                            FIELD_ETAG,
-                            item.getEtag(),
-                            ftNotIndexed));
-                }
-                index.addDocument(doc);
-            } else {
+            if (item.getStatusCode()!=200) {
+            	// Only index items that were crawled without issues
+            	// TODO: Consider widening to 4XXs at least
                 skipped++;
+            	continue;
             }
+            
+            if (item.getMimeType().matches(mimeFilter) == blacklist) {
+            	skipped++;
+            	continue;
+            }
+
+            String url = item.getURL();
+            String timestamp = item.getTimestamp();
+            if (item.isRevisit()) {
+            	if (item.getOriginalURL()==null || item.getOriginalTimestamp()==null) {
+            		// Can't index without those.
+            		// TODO: Add lookup option?
+                    skipped++;
+            		continue;
+            	} else {
+            		url = item.getOriginalURL();
+            		timestamp = item.getOriginalTimestamp();
+            	}
+            }
+
+            // Ok, we wish to index this URL/Digest
+            count++;
+            if(verbose && count%10000==0){
+                System.out.println("Indexed " + count + " - Last URL " +
+                		"from " + item.getTimestamp());
+            }
+
+            if (url.contains("\"")) {
+            	// TODO: Consider other sanity checks and also option to just log and continue on failed
+            	//       sanity checks.
+            	throw new IllegalStateException("Double quotes in URLs should always be properly escaped. " 
+            			+ item.getURL());
+            }
+
+            // Add URL to document.
+            Document doc = new Document();
+
+            doc.add(new Field(
+                    FIELD_URL,
+                    url,
+                    (indexURL ? ftIndexed : ftNotIndexed)));
+            if(equivalent){
+                doc.add(new Field(
+                        FIELD_URL_NORMALIZED,
+                        stripURL(item.getURL()),
+                        (indexURL ? ftIndexed : ftNotIndexed)));
+            }
+
+            // Add digest to document
+            doc.add(new Field(
+                    FIELD_DIGEST,
+                    item.getContentDigest(),
+                    (indexDigest ? ftIndexed : ftNotIndexed)));
+            
+            // add timestamp
+            doc.add(new Field(
+                    FIELD_TIMESTAMP,
+                    timestamp,
+                    ftNotIndexed));
+
+            // Include etag?
+            if(etag && item.getEtag()!=null){
+                doc.add(new Field(
+                        FIELD_ETAG,
+                        item.getEtag(),
+                        ftNotIndexed));
+            }
+            index.updateDocument(new Term(FIELD_URL), doc);
         }
         if(verbose){
             System.out.println("Indexed " + count + " items (skipped " + skipped + ")");
