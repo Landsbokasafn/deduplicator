@@ -29,12 +29,15 @@ import java.lang.reflect.Constructor;
 import java.util.List;
 
 import org.apache.commons.cli.Option;
-import org.apache.lucene.analysis.WhitespaceAnalyzer;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.FieldType;
+import org.apache.lucene.document.StringField;
 import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriter.MaxFieldLength;
+import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.util.Version;
 import org.archive.util.DateUtils;
 
 /**
@@ -50,6 +53,8 @@ import org.archive.util.DateUtils;
  * 
  */
 public class DigestIndexer {
+	
+	public static final Version LUCENE_VER = Version.LUCENE_47;
 	
     // Lucene index field names
     /** The URL 
@@ -120,12 +125,17 @@ public class DigestIndexer {
             indexURL = false;
         }
 
+        IndexWriterConfig indexWriterConfig = 
+        		new IndexWriterConfig(LUCENE_VER, new WhitespaceAnalyzer(LUCENE_VER));
+        if (addToExistingIndex) {
+        	indexWriterConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
+        } else {
+        	indexWriterConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
+        }
+        
         // Set up the index writer
-        index = new IndexWriter(
-        		FSDirectory.open(new File(indexLocation)),
-                new WhitespaceAnalyzer(),
-                !addToExistingIndex,
-                MaxFieldLength.UNLIMITED);
+        index = new IndexWriter(FSDirectory.open(new File(indexLocation)),indexWriterConfig); 
+        
     }
 
     /**
@@ -188,6 +198,16 @@ public class DigestIndexer {
 
         int count = 0;
         int skipped = 0;
+
+        // Define field types for indexed and non indexed fields. No fields are tokanized
+        FieldType ftIndexed = new FieldType();
+        ftIndexed.setIndexed(true);
+        ftIndexed.setTokenized(false);
+        ftIndexed.setStored(true);
+
+        FieldType ftNotIndexed = new FieldType(ftIndexed);
+        ftNotIndexed.setIndexed(false);
+        
         while (dataIt.hasNext()) {
             CrawlDataItem item = dataIt.next();
 
@@ -207,47 +227,36 @@ public class DigestIndexer {
                 	throw new IllegalStateException("Double quotes in URLs should always be properly escaped. " 
                 			+ item.getURL());
                 }
+                
                 doc.add(new Field(
                         FIELD_URL,
                         item.getURL(),
-                        Field.Store.YES,
-                        (indexURL ? Field.Index.NOT_ANALYZED : Field.Index.NO)
-                        ));
+                        (indexURL ? ftIndexed : ftNotIndexed)));
                 if(equivalent){
                     doc.add(new Field(
                             FIELD_URL_NORMALIZED,
                             stripURL(item.getURL()),
-                            Field.Store.YES,
-                            (indexURL ? 
-                                    Field.Index.NOT_ANALYZED : Field.Index.NO)
-                    ));
+                            (indexURL ? ftIndexed : ftNotIndexed)));
                 }
 
                 // Add digest to document
                 doc.add(new Field(
                         FIELD_DIGEST,
                         item.getContentDigest(),
-                        Field.Store.YES,
-                        (indexDigest ? 
-                                Field.Index.NOT_ANALYZED : Field.Index.NO)
-                        ));
+                        (indexDigest ? ftIndexed : ftNotIndexed)));
                 
-                // add timestamp?
+                // add timestamp
                 doc.add(new Field(
                         FIELD_TIMESTAMP,
                         item.getTimestamp(),
-                        Field.Store.YES,
-                        Field.Index.NO
-                        ));
+                        ftNotIndexed));
 
                 // Include etag?
                 if(etag && item.getEtag()!=null){
                     doc.add(new Field(
                             FIELD_ETAG,
                             item.getEtag(),
-                            Field.Store.YES,
-                            Field.Index.NO
-                            ));
+                            ftNotIndexed));
                 }
                 index.addDocument(doc);
             } else {
@@ -262,14 +271,9 @@ public class DigestIndexer {
     
     /**
      * Close the index.
-     * @param optimize If true then the index will be optimized before it is
-     *                 closed.
      * @throws IOException If an error occurs optimizing or closing the index.
      */
-    public void close(boolean optimize) throws IOException{
-        if(optimize){
-            index.optimize();
-        }
+    public void close() throws IOException{
         index.close();
     }
 
@@ -366,7 +370,7 @@ public class DigestIndexer {
         di.writeToIndex(iterator, mimefilter, blacklist, true, skipDuplicates);
         
         // Clean-up
-        di.close(true);
+        di.close();
         
         System.out.println("Total run time: " + 
         		DateUtils.formatMillisecondsToConventional(System.currentTimeMillis()-start));

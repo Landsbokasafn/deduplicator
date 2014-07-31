@@ -34,14 +34,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.ConstantScoreQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TermRangeFilter;
-import org.apache.lucene.search.TopScoreDocCollector;
-import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.store.NIOFSDirectory;
 import org.archive.modules.CrawlURI;
 import org.archive.modules.ProcessResult;
 import org.archive.modules.Processor;
@@ -191,6 +190,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
     // Member variables.
     
     protected IndexSearcher searcher = null;
+    protected DirectoryReader dReader = null;
     protected boolean lookupByURL = true;
     protected boolean statsPerHost = false;
     
@@ -201,7 +201,8 @@ public class DeDuplicator extends Processor implements InitializingBean {
         // Index location
         String indexLocation = getIndexLocation();
         try {
-            searcher = new IndexSearcher(FSDirectory.open(new File(indexLocation)));
+            dReader = DirectoryReader.open(new NIOFSDirectory(new File(indexLocation)));
+            searcher = new IndexSearcher(dReader);
         } catch (Exception e) {
         	throw new IllegalArgumentException("Unable to find/open index at " + indexLocation,e);
         } 
@@ -382,75 +383,74 @@ public class DeDuplicator extends Processor implements InitializingBean {
      * @return The result of the lookup (a Lucene document). If a duplicate is
      *         not found null is returned.
      */
-    protected Document lookupByURL(CrawlURI curi, Statistics currHostStats){
-        // Look the CrawlURI's URL up in the index.
-        try {
-            Query query = queryField(DigestIndexer.FIELD_URL, curi.toString());
-        	TopScoreDocCollector collector = TopScoreDocCollector.create(
-        			searcher.docFreq(new Term(DigestIndexer.FIELD_URL, curi.getURI())), false);
-            searcher.search(query, collector);
-            ScoreDoc[] hits = collector.topDocs().scoreDocs;
-            Document doc = null;
-            String currentDigest = curi.getContentDigestString();
-            if(hits != null && hits.length > 0){
-                // Typically there should only be one hit, but we'll allow for
-                // multiple hits.
-                for(int i=0 ; i<hits.length ; i++){
-                    // Multiple hits on same exact URL should be rare
-                    // See if any have matching content digests
-                    doc = searcher.doc(hits[i].doc);
-                    String oldDigest = doc.get(DigestIndexer.FIELD_DIGEST);
+	protected Document lookupByURL(CrawlURI curi, Statistics currHostStats) {
+		// Look the CrawlURI's URL up in the index.
+		try {
+			Query query = queryField(DigestIndexer.FIELD_URL, curi.getURI());
+			ScoreDoc[] hits = searcher.search(query, null, 5).scoreDocs;
 
-                    if(oldDigest.equalsIgnoreCase(currentDigest)){
-                        stats.exactURLDuplicates++;
-                        if(statsPerHost){ 
-                            currHostStats.exactURLDuplicates++;
-                        }
-                            
-                        logger.finest("Found exact match for " + 
-                                curi.toString());
-                        
-                        // If we found a hit, no need to look at other hits.
-                        return doc;
-                    }
-                }
-            } 
-            if(getTryEquivalent()) {
-                // No exact hits. Let's try lenient matching.
-                String normalizedURL = DigestIndexer.stripURL(curi.toString());
-                query = queryField(DigestIndexer.FIELD_URL_NORMALIZED, normalizedURL);
-            	collector = TopScoreDocCollector.create(
-            			searcher.docFreq(new Term(DigestIndexer.FIELD_URL_NORMALIZED, normalizedURL)), false);
-                searcher.search(query,collector);
-                hits = collector.topDocs().scoreDocs;
-                for(int i=0 ; i<hits.length ; i++){
-                	doc = searcher.doc(hits[i].doc);
-                    String indexDigest = doc.get(DigestIndexer.FIELD_DIGEST);
-                    if(indexDigest.equals(currentDigest)){
-                        // Make note in log
-                        String equivURL = doc.get(
-                                DigestIndexer.FIELD_URL);
-                        curi.getAnnotations().add("equivalentURL:\"" + equivURL + "\"");
-                        // Increment statistics counters
-                        stats.equivalentURLDuplicates++;
-                        if(statsPerHost){ 
-                            currHostStats.equivalentURLDuplicates++;
-                        }
-                        logger.finest("Found equivalent match for " + 
-                                curi.toString() + ". Normalized: " + 
-                                normalizedURL + ". Equivalent to: " + equivURL);
+			Document doc = null;
+			String currentDigest = curi.getContentDigestString();
+			if (hits != null && hits.length > 0) {
+				// Typically there should only be one hit, but we'll allow for
+				// multiple hits.
+				for (int i = 0; i < hits.length; i++) {
+					// Multiple hits on same exact URL should be rare
+					// See if any have matching content digests
+					doc = searcher.doc(hits[i].doc);
+					String oldDigest = doc.get(DigestIndexer.FIELD_DIGEST);
 
-                        //If we found a hit, no need to look at more.
-                        return doc;
-                    }
-                }
-            }
-        } catch (IOException e) {
-            logger.log(Level.SEVERE,"Error accessing index.",e);
-        }
-        // If we make it here then this is not a duplicate.
-        return null;
-    }
+					if (oldDigest.equalsIgnoreCase(currentDigest)) {
+						stats.exactURLDuplicates++;
+						if (statsPerHost) {
+							currHostStats.exactURLDuplicates++;
+						}
+
+						logger.finest("Found exact match for "
+								+ curi.toString());
+
+						// If we found a hit, no need to look at other hits.
+						return doc;
+					}
+				}
+			}
+			if (getTryEquivalent()) {
+				// No exact hits. Let's try lenient matching.
+				String normalizedURL = DigestIndexer.stripURL(curi.toString()); // TODO:
+																				// Revise
+																				// this
+				query = queryField(DigestIndexer.FIELD_URL, normalizedURL);
+				hits = searcher.search(query, null, 5).scoreDocs;
+
+				for (int i = 0; i < hits.length; i++) {
+					doc = searcher.doc(hits[i].doc);
+					String indexDigest = doc.get(DigestIndexer.FIELD_DIGEST);
+					if (indexDigest.equals(currentDigest)) {
+						// Make note in log
+						String equivURL = doc.get(DigestIndexer.FIELD_URL);
+						curi.getAnnotations().add(
+								"equivalentURL:\"" + equivURL + "\"");
+						// Increment statistics counters
+						stats.equivalentURLDuplicates++;
+						if (statsPerHost) {
+							currHostStats.equivalentURLDuplicates++;
+						}
+						logger.finest("Found equivalent match for "
+								+ curi.toString() + ". Normalized: "
+								+ normalizedURL + ". Equivalent to: "
+								+ equivURL);
+
+						// If we found a hit, no need to look at more.
+						return doc;
+					}
+				}
+			}
+		} catch (IOException e) {
+			logger.log(Level.SEVERE, "Error accessing index.", e);
+		}
+		// If we make it here then this is not a duplicate.
+		return null;
+	}
     
 	/** 
      * Process a CrawlURI looking up in the index by content digest
@@ -471,10 +471,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
         }
         Query query = queryField(DigestIndexer.FIELD_DIGEST, currentDigest);
         try {
-        	int hitsOnDigest = searcher.docFreq(new Term(DigestIndexer.FIELD_DIGEST,currentDigest));
-        	TopScoreDocCollector collector = TopScoreDocCollector.create(hitsOnDigest, false);
-            searcher.search(query,collector);
-            ScoreDoc[] hits = collector.topDocs().scoreDocs;
+            ScoreDoc[] hits = searcher.search(query, null, 50).scoreDocs; // TODO: Look at value 50
             StringBuffer mirrors = new StringBuffer();
             mirrors.append("mirrors: ");
             String url = curi.toString();
@@ -642,14 +639,11 @@ public class DeDuplicator extends Processor implements InitializingBean {
 		return ret + "%";
 	}
 	
-	protected void doAnalysis(CrawlURI curi, Statistics currHostStats,
-            boolean isDuplicate) {
-		try{
-    		Query query = queryField(DigestIndexer.FIELD_URL, curi.toString());
-    		TopScoreDocCollector collector = TopScoreDocCollector.create(
-    				searcher.docFreq(new Term(DigestIndexer.FIELD_URL, curi.toString())), false);
-    		searcher.search(query,collector);
-    		ScoreDoc[] hits = collector.topDocs().scoreDocs;
+	protected void doAnalysis(CrawlURI curi, Statistics currHostStats, boolean isDuplicate) {
+		// TODO: Why is there a seperate lookup here?
+		try {
+    		Query query = queryField(DigestIndexer.FIELD_URL, curi.getURI());
+    		ScoreDoc[] hits = searcher.search(query, null, 5).scoreDocs;
     		Document doc = null;
     		if(hits != null && hits.length > 0){
                 // If there are multiple hits, use the one with the most
@@ -761,18 +755,15 @@ public class DeDuplicator extends Processor implements InitializingBean {
      * @returns A Query for the given value in the given field.
      */
     protected Query queryField(String fieldName, String value) {
-        Query query = null;
-        	query = new ConstantScoreQuery(
-                new TermRangeFilter(fieldName, value, value, true, true));
-        
+    	Query query = new TermQuery(new Term(fieldName,value));
         return query;
     }
 
 	
 	protected void finalTasks() {
 		try {
-			if (searcher != null) {
-				searcher.close();
+			if (dReader != null) {
+				dReader.close();
 			}
 		} catch (IOException e) {
 			logger.log(Level.SEVERE,"Error closing index",e);
