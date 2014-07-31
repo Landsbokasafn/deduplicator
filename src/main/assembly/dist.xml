@@ -9,7 +9,9 @@
   	<dependencySet>
   		<outputDirectory>/lib</outputDirectory>
   		<includes>
+  			<include>org.apache.lucene:lucene-analyzers-common</include>
   			<include>org.apache.lucene:lucene-core</include>
+  			<include>org.apache.lucene:lucene-queryparser</include>
   		</includes>
   	</dependencySet>
   </dependencySets>
