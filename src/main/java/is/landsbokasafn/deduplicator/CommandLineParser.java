@@ -191,8 +191,8 @@ public class CommandLineParser {
     /**
      * @return Arguments passed on the command line.
      */
-    @SuppressWarnings("rawtypes")
-	public List getCommandLineArguments() {
+    @SuppressWarnings({ "unchecked" })
+	public List<String> getCommandLineArguments() {
         return this.commandLine.getArgList();
     }
 
