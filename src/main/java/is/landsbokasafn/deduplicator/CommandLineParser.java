@@ -74,13 +74,12 @@ public class CommandLineParser {
                 "Prints this message and exits."));
         
         Option opt = new Option("o","mode", true,
-                "Index by URL, HASH or BOTH. Default: BOTH.");
+                "Index by URL, DIGEST or BOTH. Default: BOTH.");
         opt.setArgName("type");
         this.options.addOption(opt);
         
-        this.options.addOption(new Option("s","equivalent", false,
-                "Include a stripped URL in the index for equivalent URL " +
-                "matches."));
+        this.options.addOption(new Option("s","canonicalize", false,
+                "Add a canonicalized version of the URL to the index."));
         
         this.options.addOption(new Option("e","etag", false,
         "Include etags in the index (if available in the source)."));
@@ -103,10 +102,6 @@ public class CommandLineParser {
         this.options.addOption(new Option("a","add", false,
             "Add source data to existing index."));
 
-        this.options.addOption(new Option("d","skip-duplicates", false,
-                "If set, URIs marked as duplicates will not be added to the " +
-                "index."));
-        
         PosixParser parser = new PosixParser();
         try {
             this.commandLine = parser.parse(this.options, args, false);

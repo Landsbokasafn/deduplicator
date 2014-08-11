@@ -39,6 +39,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.archive.util.DateUtils;
+import org.archive.wayback.util.url.AggressiveUrlCanonicalizer;
 
 /**
  * A class for building a de-duplication index.
@@ -74,17 +75,19 @@ public class DigestIndexer {
     /** WARC Record ID of original payload capture. Suitable for WARC-Refers-To field. **/
     public static final String FIELD_ORIGINAL_RECORD_ID="warc-record-id";
 
-    // Indexing modes (by url, by hash or both)
+    // Indexing modes (by url, by digest or both)
     /** Index URL enabling lookups by URL. If normalized URLs are included
      *  in the index they will also be indexed and searchable. **/
     public static final String MODE_URL = "URL";
-    /** Index HASH enabling lookups by hash (content digest) **/
-    public static final String MODE_HASH = "HASH";
-    /** Both URL and hash are indexed **/
+    /** Index digest enabling lookups by payload digest **/
+    public static final String MODE_DIGEST = "DIGEST";
+    /** Both URL and digest are indexed **/
     public static final String MODE_BOTH = "BOTH";
 
     /** The index being manipulated **/
     IndexWriter index;
+    
+    private static final AggressiveUrlCanonicalizer canonicalizer = new AggressiveUrlCanonicalizer();
     
     // The options with default settings
     boolean etag = false;
@@ -97,7 +100,7 @@ public class DigestIndexer {
      * deduplication information to it.
      * 
      * @param indexLocation The location of the index (path).
-     * @param indexingMode Index {@link #MODE_URL}, {@link #MODE_HASH} or 
+     * @param indexingMode Index {@link #MODE_URL}, {@link #MODE_DIGEST} or 
      *                     {@link #MODE_BOTH}.
      * @param includeNormalizedURL Should a normalized version of the URL be 
      *                             added to the index. 
@@ -121,7 +124,7 @@ public class DigestIndexer {
         
         if(indexingMode.equals(MODE_URL)){
             indexDigest = false;
-        } else if(indexingMode.equals(MODE_HASH)){
+        } else if(indexingMode.equals(MODE_DIGEST)){
             indexURL = false;
         }
 
@@ -160,40 +163,9 @@ public class DigestIndexer {
      */
     public long writeToIndex(
             CrawlDataIterator dataIt, 
-            String mimefilter, 
-            boolean blacklist,
-            boolean verbose) 
-            throws IOException {
-        return writeToIndex(dataIt, mimefilter, blacklist, verbose, false);
-    }
-
-    /**
-     * Writes the contents of a {@link CrawlDataIterator} to this index.
-     * <p>
-     * This method may be invoked multiple times with different 
-     * CrawlDataIterators until {@link #close(boolean)} has been called.
-     * 
-     * @param dataIt The CrawlDataIterator that provides the data to index.
-     * @param mimeFilter A regular expression that is used as a filter on the 
-     *                   mimetypes to include in the index. 
-     * @param blacklist If true then the <code>mimefilter</code> is used
-     *                  as a blacklist for mimetypes. If false then the
-     *                  <code>mimefilter</code> is treated as a whitelist. 
-     * @param defaultOrigin If an item is missing an origin, this default value
-     *                      will be assigned to it. Can be null if no default
-     *                      origin value should be assigned.
-     * @param verbose If true then progress information will be sent to 
-     *                System.out.
-     * @param skipDuplicates Do not add URLs that are marked as duplicates to the index
-     * @return The number of items added to the index.
-     * @throws IOException If an error occurs writing the index.
-     */
-    public long writeToIndex(
-            CrawlDataIterator dataIt, 
             String mimeFilter, 
             boolean blacklist,
-            boolean verbose,
-            boolean skipDuplicates) 
+            boolean verbose) 
             throws IOException {
 
         int count = 0;
@@ -261,7 +233,7 @@ public class DigestIndexer {
             if(equivalent){
                 doc.add(new Field(
                         FIELD_URL_NORMALIZED,
-                        stripURL(item.getURL()),
+                        canonicalizer.canonicalize(item.getURL()),
                         (indexURL ? ftIndexed : ftNotIndexed)));
             }
 
@@ -300,28 +272,9 @@ public class DigestIndexer {
         index.close();
     }
 
-    /**
-	 * An aggressive URL normalizer. This methods removes any www[0-9]. 
-	 * segments from an URL, along with any trailing slashes and all
-	 * parameters.
-	 * <p>
-	 * Example:
-	 * <code>http://www.bok.hi.is/?lang=ice</code> would become
-	 * <code>http://bok.hi.is</code>
-	 * @param url The url to strip
-	 * @return A normalized URL.
-	 */
-    // TODO: Use URL canonicalizer in place of this crude thing
-	public static String stripURL(String url){
-		String strippedUrl = url.replaceAll("www[0-9]*\\.","");
-		strippedUrl = url.replaceAll("\\?.*$","");
-		strippedUrl = url.replaceAll("/$","");
-		return strippedUrl;
-	}
-    
-
     @SuppressWarnings({"unchecked","rawtypes"})
 	public static void main(String[] args) throws Exception {
+		// Parse command line options    	
         CommandLineParser clp = new CommandLineParser(args,new PrintWriter(System.out));
         
         long start = System.currentTimeMillis();
@@ -334,7 +287,6 @@ public class DigestIndexer {
         String mimefilter = "^text/.*";
         boolean blacklist = true;
         String iteratorClassName = WarcIterator.class.getName();
-        boolean skipDuplicates = false;
 
         // Process the options
         Option[] opts = clp.getCommandLineOptions();
@@ -349,7 +301,6 @@ public class DigestIndexer {
             case 'm' : mimefilter = opt.getValue(); break;
             case 'o' : indexMode = opt.getValue(); break;
             case 's' : equivalent = true; break;
-            case 'd' : skipDuplicates = true; break;
             }
         }
         
@@ -373,10 +324,8 @@ public class DigestIndexer {
         System.out.println(" - Mime filter: " + mimefilter + 
                 " (" + (blacklist?"blacklist":"whitelist")+")");
         System.out.println(" - Includes" + 
-                (equivalent?" <equivalent URL>":"") +
+                (equivalent?" <canonical URL>":"") +
                 (etag?" <etag>":""));
-        System.out.println(" - Skip duplicates: " + 
-                (skipDuplicates?"yes":"no"));
         System.out.println(" - Iterator: " + iteratorClassName);
         System.out.println("   - " + iterator.getSourceType());
         System.out.println("Target: " + cargs.get(1));
@@ -390,7 +339,7 @@ public class DigestIndexer {
         // Create the index
         DigestIndexer di = new DigestIndexer((String)cargs.get(1),indexMode,
                 equivalent, etag,addToIndex);
-        di.writeToIndex(iterator, mimefilter, blacklist, true, skipDuplicates);
+        di.writeToIndex(iterator, mimefilter, blacklist, true);
         
         // Clean-up
         di.close();

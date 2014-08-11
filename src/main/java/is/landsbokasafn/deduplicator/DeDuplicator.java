@@ -48,10 +48,9 @@ import org.archive.modules.net.ServerCache;
 import org.archive.modules.revisit.IdenticalPayloadDigestRevisit;
 import org.archive.util.ArchiveUtils;
 import org.archive.util.Base32;
+import org.archive.wayback.util.url.AggressiveUrlCanonicalizer;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import com.esotericsoftware.minlog.Log;
 
 /**
  * Heritrix compatible processor.
@@ -96,15 +95,15 @@ public class DeDuplicator extends Processor implements InitializingBean {
     /* If an exact match is not made, should the processor try 
      *  to find an equivalent match?  
      */
-    public final static String ATTR_EQUIVALENT = "try-equivalent";
+    public final static String ATTR_CANONICAL = "try-canonical";
     {
-    	setTryEquivalent(false);
+    	setTryCanonical(false);
     }
-    public boolean getTryEquivalent(){
-    	return (Boolean)kp.get(ATTR_EQUIVALENT);
+    public boolean getTryCanonical(){
+    	return (Boolean)kp.get(ATTR_CANONICAL);
     }
-    public void setTryEquivalent(boolean tryEquivalent){
-    	kp.put(ATTR_EQUIVALENT,tryEquivalent);
+    public void setTryCanonical(boolean tryEquivalent){
+    	kp.put(ATTR_CANONICAL,tryEquivalent);
     }
 
     /* The filter on mime types. This is either a blacklist or whitelist
@@ -160,20 +159,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
     	kp.put(ATTR_STATS_PER_HOST,statsPerHost);
     }
 
-    /* Should 'annotations' be made and if so, how? */
-    public final static String ATTR_REVISIT_ANNOTATING = "revisit-annotating";
-    public final static AnnotationHandling DEFAULT_REVISIT_ANNOTATING = AnnotationHandling.NONE;
-    {
-        setAnnotationHandling(DEFAULT_REVISIT_ANNOTATING);
-    }
-    public AnnotationHandling getAnnotationHandling() {
-        return (AnnotationHandling) kp.get(ATTR_REVISIT_ANNOTATING);
-    }
-    public void setAnnotationHandling(AnnotationHandling annotationHandling) {
-		kp.put(ATTR_REVISIT_ANNOTATING,annotationHandling);
-    }
-
-       
     // Spring configured access to Heritrix resources
     
     // Gain access to the ServerCache for host based statistics.
@@ -185,6 +170,9 @@ public class DeDuplicator extends Processor implements InitializingBean {
     public void setServerCache(ServerCache serverCache) {
         this.serverCache = serverCache;
     }
+    
+    // TODO: Consider making configurable. Needs to match what is written to the index though.
+    AggressiveUrlCanonicalizer canonicalizer = new AggressiveUrlCanonicalizer();
 
     
     // Member variables.
@@ -273,10 +261,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
 	
 	@Override
 	protected ProcessResult innerProcessResult(CrawlURI curi) throws InterruptedException {
-        ProcessResult processResult = ProcessResult.PROCEED; // Default. Continue as normal
-
-        logger.finest("Processing " + curi.toString() + "(" + 
-                curi.getContentType() + ")");
+        logger.finest("Processing " + curi.toString() + "(" + curi.getContentType() + ")");
 
         stats.handledNumber++;
         stats.totalAmount += curi.getContentSize();
@@ -311,52 +296,18 @@ public class DeDuplicator extends Processor implements InitializingBean {
                 currHostStats.duplicateAmount+=curi.getContentSize();
                 currHostStats.duplicateNumber++;
             }
-            
-            String duplicateTimestamp = duplicate.get(DigestIndexer.FIELD_TIMESTAMP);
-            String duplicateURL = duplicate.get(DigestIndexer.FIELD_URL);
-
-            // Annotate (optionally) with 'revisitOf'. 
-            // This is for building indexes using crawl.log rather than WARCs
-            String annotation = null;
-
-            switch (getAnnotationHandling()) {
-            case TIMESTAMP_AND_URL :
-            	String urlAnnotation = "-";
-            	if (!duplicateURL.equals(curi.getURI())) {
-            		// URLs are not supposed to have unencoded double quotes. If those are detected it would 
-            		// be a problem
-            		if (duplicateURL.contains("\"")){
-            			Log.error("Encountered URL with unencoded double quote in index: " + duplicateURL);
-            			urlAnnotation = duplicateURL.replaceAll("\"", "%22");
-            		} else {
-            			urlAnnotation = duplicateURL;
-            		}
-            	}
-                annotation = "revisitOf:\"" + duplicateTimestamp + " " + urlAnnotation + "\"";
-                break;
-            case TIMESTAMP :
-                annotation = "revisitOf:\"" + duplicateTimestamp + "\"";
-                break;
-            case NONE :
-            	// No action
-            }
-            
-            if (annotation!=null) {
-            	curi.getAnnotations().add(annotation);
-            }
-
 
             // Attach revisit profile to CURI. This will inform downstream processors that we've 
             // marked this as a duplicate/revisit
+            String duplicateTimestamp = duplicate.get(DigestIndexer.FIELD_TIMESTAMP);
+            String duplicateURL = duplicate.get(DigestIndexer.FIELD_URL);
             
         	IdenticalPayloadDigestRevisit revisitProfile = 
         			new IdenticalPayloadDigestRevisit(curi.getContentDigestString());
         	
-        	revisitProfile.setRefersToTargetURI(duplicate.get(DigestIndexer.FIELD_URL));
+        	revisitProfile.setRefersToTargetURI(duplicateURL);
         	String refersToDate = duplicateTimestamp;
-        	if (refersToDate!=null && !refersToDate.isEmpty()) {
-        		revisitProfile.setRefersToDate(refersToDate);
-        	}
+       		revisitProfile.setRefersToDate(refersToDate);
         	
         	String refersToRecordID = duplicate.get(DigestIndexer.FIELD_ORIGINAL_RECORD_ID);
         	if (refersToRecordID!=null && !refersToRecordID.isEmpty()) {
@@ -365,12 +316,16 @@ public class DeDuplicator extends Processor implements InitializingBean {
         	
         	curi.setRevisitProfile(revisitProfile);
 
+        	// Add annotation to crawl.log 
+            String annotation = "Revisit:IdenticalPayloadDigest";
+            curi.getAnnotations().add(annotation);
         }
         
         if(getAnalyzeTimestamp()){
             doAnalysis(curi,currHostStats, duplicate!=null);
         }
-        return processResult;
+        
+        return ProcessResult.PROCEED;
 	}
 
 	/** 
@@ -414,12 +369,10 @@ public class DeDuplicator extends Processor implements InitializingBean {
 					}
 				}
 			}
-			if (getTryEquivalent()) {
+			if (getTryCanonical()) {
 				// No exact hits. Let's try lenient matching.
-				String normalizedURL = DigestIndexer.stripURL(curi.toString()); // TODO:
-																				// Revise
-																				// this
-				query = queryField(DigestIndexer.FIELD_URL, normalizedURL);
+				String canonicalizedURL = canonicalizer.canonicalize(curi.toString()); 
+				query = queryField(DigestIndexer.FIELD_URL, canonicalizedURL);
 				hits = searcher.search(query, null, 5).scoreDocs;
 
 				for (int i = 0; i < hits.length; i++) {
@@ -431,13 +384,13 @@ public class DeDuplicator extends Processor implements InitializingBean {
 						curi.getAnnotations().add(
 								"equivalentURL:\"" + equivURL + "\"");
 						// Increment statistics counters
-						stats.equivalentURLDuplicates++;
+						stats.canonicalURLDuplicates++;
 						if (statsPerHost) {
-							currHostStats.equivalentURLDuplicates++;
+							currHostStats.canonicalURLDuplicates++;
 						}
 						logger.finest("Found equivalent match for "
-								+ curi.toString() + ". Normalized: "
-								+ normalizedURL + ". Equivalent to: "
+								+ curi.toString() + ". Canonicalized: "
+								+ canonicalizedURL + ". Equivalent to: "
 								+ equivURL);
 
 						// If we found a hit, no need to look at more.
@@ -476,7 +429,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
             mirrors.append("mirrors: ");
             String url = curi.toString();
             String normalizedURL = 
-            	getTryEquivalent() ? DigestIndexer.stripURL(url) : null;
+            	getTryCanonical() ? canonicalizer.canonicalize(url) : null;
             if(hits != null && hits.length > 0){
                 // Can definitely be more then one
                 // Note: We may find an equivalent match before we find an
@@ -497,14 +450,14 @@ public class DeDuplicator extends Processor implements InitializingBean {
                     
                     // If not, then check if it is an equivalent match (if
                     // equivalent matches are allowed).
-                    if(duplicate == null && getTryEquivalent()){
+                    if(duplicate == null && getTryCanonical()){
                         String indexNormalizedURL = 
                             doc.get(DigestIndexer.FIELD_URL_NORMALIZED);
                         if(normalizedURL.equals(indexNormalizedURL)){
                             duplicate = doc;
-                            stats.equivalentURLDuplicates++;
+                            stats.canonicalURLDuplicates++;
                             if(statsPerHost){
-                                currHostStats.equivalentURLDuplicates++;
+                                currHostStats.canonicalURLDuplicates++;
                             }
                             curi.getAnnotations().add("equivalentURL:\"" + indexURL + "\"");
                             logger.finest("Found equivalent match for " + 
@@ -550,9 +503,9 @@ public class DeDuplicator extends Processor implements InitializingBean {
         		getPercentage(stats.duplicateAmount, stats.totalAmount) + "\n");
         
     	ret.append("  New (no hits):     " + (stats.handledNumber-
-    			(stats.mirrorNumber+stats.exactURLDuplicates+stats.equivalentURLDuplicates)) + "\n");
+    			(stats.mirrorNumber+stats.exactURLDuplicates+stats.canonicalURLDuplicates)) + "\n");
     	ret.append("  Exact hits:        " + stats.exactURLDuplicates + "\n");
-    	ret.append("  Equivalent hits:   " + stats.equivalentURLDuplicates + "\n");
+    	ret.append("  Canonical hits:    " + stats.canonicalURLDuplicates + "\n");
         if(lookupByURL==false){
         	ret.append("  Mirror hits:       " + stats.mirrorNumber + "\n");
         }
@@ -597,11 +550,11 @@ public class DeDuplicator extends Processor implements InitializingBean {
                     ret.append(curr.handledNumber-
                             (curr.mirrorNumber+
                              curr.exactURLDuplicates+
-                             curr.equivalentURLDuplicates));
+                             curr.canonicalURLDuplicates));
                     ret.append(" ");
                     ret.append(curr.exactURLDuplicates);
                     ret.append(" ");
-                    ret.append(curr.equivalentURLDuplicates);
+                    ret.append(curr.canonicalURLDuplicates);
 
                     if(lookupByURL==false){
                         ret.append(" ");
@@ -638,9 +591,15 @@ public class DeDuplicator extends Processor implements InitializingBean {
 		}
 		return ret + "%";
 	}
-	
+
+	/**
+	 * Checks if a CURI would have been deemed a server not modified based on its timestamp.
+	 * This is for analysis only and should not be used in large scale crawls.
+	 * @param curi The CrawlURI to check
+	 * @param currHostStats Statistics object to store results
+	 * @param isDuplicate Whether the CrawlURI was deemed a duplicate by content digest
+	 */
 	protected void doAnalysis(CrawlURI curi, Statistics currHostStats, boolean isDuplicate) {
-		// TODO: Why is there a seperate lookup here?
 		try {
     		Query query = queryField(DigestIndexer.FIELD_URL, curi.getURI());
     		ScoreDoc[] hits = searcher.search(query, null, 5).scoreDocs;
@@ -794,7 +753,7 @@ class Statistics{
     /** The number of URIs that turned out to have equivalent URL and content
      *  digest matches.
      */
-    long equivalentURLDuplicates = 0;
+    long canonicalURLDuplicates = 0;
     
     /** The number of URIs that, while having no exact or equivalent matches,  
      *  do have exact content digest matches against non-equivalent URIs.
