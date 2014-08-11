@@ -41,7 +41,7 @@ import java.util.NoSuchElementException;
 public class CrawlLogIterator implements CrawlDataIterator {
 
 	// Date format as specified for WARC-Date and WARC-Refers-To-Date
-    private SimpleDateFormat sdfWarc = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    private SimpleDateFormat sdfWarc = new SimpleDateFormat(IndexBuilder.WARC_DATE_FORMAT);
     // Date format as used in Heritrix crawl.log
     private SimpleDateFormat sdfCrawlLog = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 

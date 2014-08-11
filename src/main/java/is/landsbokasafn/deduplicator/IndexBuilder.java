@@ -48,9 +48,11 @@ public class IndexBuilder {
 	
 	public static final Version LUCENE_VER = Version.LUCENE_47;
 	
+	public static final String WARC_DATE_FORMAT="yyyy-MM-dd'T'HH:mm:ss'Z'";
+	
     // Lucene index field names
     /** The URL 
-     *  This value is suitable for use in warc/revist records as the WARC-Refers-To-Target-URI
+     *  This value is suitable for use in warc/revisit records as the WARC-Refers-To-Target-URI
      **/
 	public static final String FIELD_URL = "url";
     /** The content digest as String **/
@@ -61,8 +63,8 @@ public class IndexBuilder {
     public static final String FIELD_TIMESTAMP = "date";
     /** The document's etag **/
     public static final String FIELD_ETAG = "etag";
-    /** A stripped (canonicalized) version of the URL **/
-	public static final String FIELD_URL_NORMALIZED = "url-normalized";
+    /** A canonicalized version of the URL **/
+	public static final String FIELD_URL_CANONICALIZED = "url-canonicalized";
     /** WARC Record ID of original payload capture. Suitable for WARC-Refers-To field. **/
     public static final String FIELD_ORIGINAL_RECORD_ID="warc-record-id";
 
@@ -93,7 +95,7 @@ public class IndexBuilder {
      * @param indexLocation The location of the index (path).
      * @param indexingMode Index {@link #MODE_URL}, {@link #MODE_DIGEST} or 
      *                     {@link #MODE_BOTH}.
-     * @param includeNormalizedURL Should a normalized version of the URL be 
+     * @param includeCanonicalizedURL Should a normalized version of the URL be 
      *                             added to the index. 
      *                             See {@link #stripURL(String)}.
      * @param includeTimestamp Should a timestamp be included in the index.
@@ -106,12 +108,12 @@ public class IndexBuilder {
     public IndexBuilder(
             String indexLocation,
             String indexingMode,
-            boolean includeNormalizedURL,
+            boolean includeCanonicalizedURL,
             boolean includeEtag,
-            boolean addToExistingIndex) throws IOException{
+            boolean addToExistingIndex) throws IOException {
         
         this.etag = includeEtag;
-        this.equivalent = includeNormalizedURL;
+        this.equivalent = includeCanonicalizedURL;
         
         if(indexingMode.equals(MODE_URL)){
             indexDigest = false;
@@ -154,6 +156,7 @@ public class IndexBuilder {
      */
     public long writeToIndex(
             CrawlDataIterator dataIt, 
+            IdenticalPayloadDigestRevisitResolver revisitResolver,
             String mimeFilter, 
             boolean blacklist,
             boolean verbose) 
@@ -188,12 +191,22 @@ public class IndexBuilder {
 
             String url = item.getURL();
             String timestamp = item.getTimestamp();
+            String digest = item.getContentDigest();
             if (item.isRevisit()) {
             	if (item.getOriginalURL()==null || item.getOriginalTimestamp()==null) {
-            		// Can't index without those.
-            		// TODO: Add lookup option?
-                    skipped++;
-            		continue;
+            		// Can't index without those, try the resolver
+            		CrawlDataItem original = null;
+            		if (revisitResolver!=null) {
+            			original = revisitResolver.resolve(url, digest, timestamp, indexDigest);
+            		}
+            		if (original!=null) {
+            			// TODO: Do we need to do any extra checking here or can we just trust the resolver?
+            			url = original.getURL();
+            			timestamp = original.getTimestamp();
+            		} else {
+	                    skipped++;
+	            		continue;
+            		}
             	} else {
             		url = item.getOriginalURL();
             		timestamp = item.getOriginalTimestamp();
@@ -223,7 +236,7 @@ public class IndexBuilder {
                     (indexURL ? ftIndexed : ftNotIndexed)));
             if(equivalent){
                 doc.add(new Field(
-                        FIELD_URL_NORMALIZED,
+                        FIELD_URL_CANONICALIZED,
                         canonicalizer.canonicalize(item.getURL()),
                         (indexURL ? ftIndexed : ftNotIndexed)));
             }

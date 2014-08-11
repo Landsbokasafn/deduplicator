@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Constructor;
 import java.util.List;
 
 import org.apache.commons.cli.Option;
@@ -24,6 +23,7 @@ public class IndexingLauncher {
 	private static final String WHITELIST_CONF_KEY = "deduplicator.whitelist";
 	private static final String ADD_TO_INDEX_CONF_KEY = "deduplicator.add";
 	private static final String ITERATOR_CONF_KEY = "deduplicator.crawldataiterator";
+	private static final String REVISIT_RESOLVER_CONF_KEY = "deduplicator.revistresolver";
 	
 	private static void loadConfiguration() {
 		// Load properties file, either from heritrix.home/conf or
@@ -71,7 +71,6 @@ public class IndexingLauncher {
 		return prop;
 	}
 	
-    @SuppressWarnings({"unchecked","rawtypes"})
 	public static void main(String[] args) throws Exception {
     	loadConfiguration();
 
@@ -83,7 +82,7 @@ public class IndexingLauncher {
         String mimefilter = readStringConfig(MIME_CONF_KEY, "^text/.*");
         boolean whitelist = readBooleanConfig(WHITELIST_CONF_KEY, false);
         String iteratorClassName = readStringConfig(ITERATOR_CONF_KEY, WarcIterator.class.getName());
-
+        String revisitResolverClassName = readStringConfig(REVISIT_RESOLVER_CONF_KEY, null);
     	
 		// Parse command line options    	
         CommandLineParser clp = new CommandLineParser(args,new PrintWriter(System.out));
@@ -101,20 +100,27 @@ public class IndexingLauncher {
             case 's' : canonical = true; break;
             }
         }
-        
+
         List<String> cargs = clp.getCommandLineArguments(); 
-        
         if(cargs.size() != 2){
             // Should be exactly two arguments. Source and target!
             clp.usage(0);
         }
+        
+        String source = cargs.get(0);
+        String target = cargs.get(1);
 
         // Load the CrawlDataIterator
-        Class cl = Class.forName(iteratorClassName);
-        CrawlDataIterator iterator = (CrawlDataIterator) cl.newInstance();
+        CrawlDataIterator iterator = (CrawlDataIterator)Class.forName(iteratorClassName).newInstance();
+        
+        IdenticalPayloadDigestRevisitResolver revisitResolver = null;
+        if (revisitResolverClassName!=null) {
+        	revisitResolver = 
+        			(IdenticalPayloadDigestRevisitResolver)Class.forName(revisitResolverClassName).newInstance();
+        }
 
         // Print initial stuff
-        System.out.println("Indexing: " + cargs.get(0));
+        System.out.println("Indexing: " + source);
         System.out.println(" - Mode: " + indexMode);
         System.out.println(" - Mime filter: " + mimefilter + 
                 " (" + (whitelist?"whitelist":"blacklist")+")");
@@ -123,7 +129,10 @@ public class IndexingLauncher {
                 (etag?" <etag>":""));
         System.out.println(" - Iterator: " + iteratorClassName);
         System.out.println("   - " + iterator.getSourceType());
-        System.out.println("Target: " + cargs.get(1));
+        if (revisitResolver!=null) {
+        	System.out.println(" - Revisit resolver: " + revisitResolverClassName);
+        }
+        System.out.println("Target: " + target);
         if(addToIndex){
             System.out.println(" - Add to existing index (if any)");
         } else {
@@ -131,13 +140,17 @@ public class IndexingLauncher {
                     "that location)");
         }
         
-        iterator.initialize(cargs.get(0));
+        iterator.initialize(source);
 
         // Create the index
         long start = System.currentTimeMillis();
-        IndexBuilder di = new IndexBuilder((String)cargs.get(1),indexMode,
-                canonical, etag,addToIndex);
-        di.writeToIndex(iterator, mimefilter, !whitelist, true);
+        IndexBuilder di = new IndexBuilder(
+        		target,
+        		indexMode,
+                canonical, 
+                etag,
+                addToIndex);
+        di.writeToIndex(iterator, revisitResolver, mimefilter, !whitelist, true);
         
         // Clean-up
         di.close();

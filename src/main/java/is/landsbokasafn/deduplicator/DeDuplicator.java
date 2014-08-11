@@ -452,7 +452,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
                     // equivalent matches are allowed).
                     if(duplicate == null && getTryCanonical()){
                         String indexNormalizedURL = 
-                            doc.get(IndexBuilder.FIELD_URL_NORMALIZED);
+                            doc.get(IndexBuilder.FIELD_URL_CANONICALIZED);
                         if(normalizedURL.equals(indexNormalizedURL)){
                             duplicate = doc;
                             stats.canonicalURLDuplicates++;
