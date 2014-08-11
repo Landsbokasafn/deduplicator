@@ -30,28 +30,24 @@ import java.io.IOException;
  * 
  * @author Kristinn Sigur&eth;sson
  */
-public abstract class CrawlDataIterator {
-    
-    String source;
-    
+public interface CrawlDataIterator {
     /**
-     * Constructor. 
+     * Prepare the iterator. Other methods may throw an exception until this method has been properly invoked.  
      * 
      * @param source The location of the crawl data. The meaning of this 
      *               value may vary based on the implementation of concrete
      *               subclasses. Typically it will refer to a directory or a
      *               file.
+     * @throws IOException if an error occurs reading/preparing source data
      */
-    public CrawlDataIterator(String source){
-        this.source = source;
-    }
+    public void initialize(String source) throws IOException;
     
     /**
      * Are there more elements?
      * @return true if there are more elements, false otherwise
      * @throws IOException If an error occurs accessing the crawl data.
      */
-    public abstract boolean hasNext() throws IOException;
+    public boolean hasNext() throws IOException;
     
     /**
      * Get the next {@link CrawlDataItem}.
@@ -59,13 +55,13 @@ public abstract class CrawlDataIterator {
      *         null will be returned.
      * @throws IOException If an error occurs accessing the crawl data.
      */
-    public abstract CrawlDataItem next() throws IOException;
+    public CrawlDataItem next() throws IOException;
     
     /**
      * Close any resources held open to read the crawl data.
      * @throws IOException If an error occurs closing access to crawl data.
      */
-    public abstract void close() throws IOException;
+    public void close() throws IOException;
     
     /**
      * A short, human readable, string about what source this iterator uses.
@@ -73,5 +69,5 @@ public abstract class CrawlDataIterator {
      * @return A short, human readable, string about what source this iterator 
      *         uses.
      */
-    public abstract String getSourceType();
+    public String getSourceType();
 }

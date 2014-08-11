@@ -8,7 +8,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-public class WarcIterator extends CrawlDataIterator {
+public class WarcIterator implements CrawlDataIterator {
 
 	public static final String warcFileRegex = "^.*\\.warc(.gz)?$";
 	
@@ -18,8 +18,21 @@ public class WarcIterator extends CrawlDataIterator {
     
     private CrawlDataItem nextItem = null;
     
-	public WarcIterator(String source) throws IOException {
-		super(source);
+    public WarcIterator(){
+    	
+    }
+    
+    /**
+     * Convenience constructor. Equivalent to using no-arg constructor and than invoking initialize with the 
+     * same parameter.
+     * @param source The WARC file to iterate over
+     * @throws IOException
+     */
+    public WarcIterator(String source) throws IOException {
+    	initialize(source);
+    }
+    
+	public void initialize(String source) throws IOException {
 		// Source is required to be a valid directory. Scan it and all sub-folders for WARC files
 		File baseDir = new File(source);
 		if (!baseDir.exists()) {

@@ -16,16 +16,28 @@ import org.archive.io.warc.WARCReader;
 import org.archive.io.warc.WARCReaderFactory;
 import org.archive.io.warc.WARCRecord;
 
-public class WarcFileIterator extends CrawlDataIterator {
+public class WarcFileIterator implements CrawlDataIterator {
 
 	private File warcFile;
     private Iterator<ArchiveRecord> recordIterator = null;
     private WARCReader reader = null;
     
     private CrawlDataItem nextItem = null;
-	
-	public WarcFileIterator(String source) throws IOException {
-		super(source);
+
+    public WarcFileIterator() {
+    }
+    
+    /**
+     * Convenience constructor. Equivalent to using no-arg constructor and than invoking initialize with the 
+     * same parameter.
+     * @param source The WARC file to iterate over
+     * @throws IOException
+     */
+    public WarcFileIterator(String source) throws IOException {
+    	initialize(source);
+    }
+    
+	public void initialize(String source) throws IOException {
 		warcFile = new File(source);
 		if (!warcFile.exists()) {
 			throw new IllegalArgumentException("No such file " + warcFile.getAbsolutePath());
@@ -78,7 +90,7 @@ public class WarcFileIterator extends CrawlDataIterator {
 		}
 	}
 
-	private CrawlDataItem processResponse(WARCRecord record, ArchiveRecordHeader header) throws IOException {
+	protected static CrawlDataItem processResponse(WARCRecord record, ArchiveRecordHeader header) throws IOException {
 		CrawlDataItem cdi = new CrawlDataItem();
 		cdi.setURL(header.getUrl());
 		cdi.setContentDigest((String)header.getHeaderValue(WARCConstants.HEADER_KEY_PAYLOAD_DIGEST));
@@ -151,7 +163,7 @@ public class WarcFileIterator extends CrawlDataIterator {
      * 
      * Borrowed from {@link org.archive.io.arc.ARCRecord}
      */
-    private int getEolCharsCount(byte [] bytes) {
+    private static int getEolCharsCount(byte [] bytes) {
         int count = 0;
         if (bytes != null && bytes.length >=1 &&
                 bytes[bytes.length - 1] == '\n') {

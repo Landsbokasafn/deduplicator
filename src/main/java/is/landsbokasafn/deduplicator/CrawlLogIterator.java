@@ -38,7 +38,7 @@ import java.util.NoSuchElementException;
  * @author Kristinn Sigur&eth;sson
  * @author Lars Clausen
  */
-public class CrawlLogIterator extends CrawlDataIterator {
+public class CrawlLogIterator implements CrawlDataIterator {
 
 	// Date format as specified for WARC-Date and WARC-Refers-To-Date
     private SimpleDateFormat sdfWarc = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -56,15 +56,17 @@ public class CrawlLogIterator extends CrawlDataIterator {
      */
     protected CrawlDataItem next;
     
+    public CrawlLogIterator() {
+    	// Noop constructor
+    }
+    
     /** 
      * Create a new CrawlLogIterator that reads items from a Heritrix crawl.log
      *
      * @param source The path of a Heritrix crawl.log file.
      * @throws IOException If errors were found reading the log.
      */
-    public CrawlLogIterator(String source) 
-            throws IOException {
-        super(source);
+    public void initialize(String source) throws IOException {
         in = new BufferedReader(new InputStreamReader(
                 new FileInputStream(new File(source))));
     }
