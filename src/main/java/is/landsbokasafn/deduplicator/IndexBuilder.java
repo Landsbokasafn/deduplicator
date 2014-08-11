@@ -24,11 +24,7 @@ package is.landsbokasafn.deduplicator;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.lang.reflect.Constructor;
-import java.util.List;
 
-import org.apache.commons.cli.Option;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -38,22 +34,17 @@ import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
-import org.archive.util.DateUtils;
 import org.archive.wayback.util.url.AggressiveUrlCanonicalizer;
 
 /**
  * A class for building a de-duplication index.
- * <p>
- * The indexing can be done via the command line options (Run with --help 
- * parameter to print usage information) or natively embedded in other 
- * applications. 
  * <p>
  * This class also defines string constants for the lucene field names.
  *
  * @author Kristinn Sigur&eth;sson
  * 
  */
-public class DigestIndexer {
+public class IndexBuilder {
 	
 	public static final Version LUCENE_VER = Version.LUCENE_47;
 	
@@ -112,7 +103,7 @@ public class DigestIndexer {
      *                           <code>indexLocation</code> to be overwritten.
      * @throws IOException If an error occurs opening the index.
      */
-    public DigestIndexer(
+    public IndexBuilder(
             String indexLocation,
             String indexingMode,
             boolean includeNormalizedURL,
@@ -272,79 +263,4 @@ public class DigestIndexer {
         index.close();
     }
 
-    @SuppressWarnings({"unchecked","rawtypes"})
-	public static void main(String[] args) throws Exception {
-		// Parse command line options    	
-        CommandLineParser clp = new CommandLineParser(args,new PrintWriter(System.out));
-        
-        long start = System.currentTimeMillis();
-
-        // Set default values for all settings.
-        boolean etag = false;
-        boolean equivalent = false;
-        String indexMode = MODE_BOTH;
-        boolean addToIndex = false;
-        String mimefilter = "^text/.*";
-        boolean blacklist = true;
-        String iteratorClassName = WarcIterator.class.getName();
-
-        // Process the options
-        Option[] opts = clp.getCommandLineOptions();
-        for(int i=0 ; i<opts.length ; i++){
-            Option opt = opts[i];
-            switch(opt.getId()){
-            case 'w' : blacklist=false; break;
-            case 'a' : addToIndex=true; break;
-            case 'e' : etag=true; break;
-            case 'h' : clp.usage(0); break;
-            case 'i' : iteratorClassName = opt.getValue(); break;
-            case 'm' : mimefilter = opt.getValue(); break;
-            case 'o' : indexMode = opt.getValue(); break;
-            case 's' : equivalent = true; break;
-            }
-        }
-        
-        List cargs = clp.getCommandLineArguments(); 
-        
-        if(cargs.size() != 2){
-            // Should be exactly two arguments. Source and target!
-            clp.usage(0);
-        }
-
-        // Get the CrawlDataIterator
-        // Get the iterator classname or load default.
-        Class cl = Class.forName(iteratorClassName);
-        Constructor co = cl.getConstructor(new Class[] { String.class });
-        CrawlDataIterator iterator = (CrawlDataIterator) co.newInstance(
-                new Object[] { (String)cargs.get(0) });
-
-        // Print initial stuff
-        System.out.println("Indexing: " + cargs.get(0));
-        System.out.println(" - Mode: " + indexMode);
-        System.out.println(" - Mime filter: " + mimefilter + 
-                " (" + (blacklist?"blacklist":"whitelist")+")");
-        System.out.println(" - Includes" + 
-                (equivalent?" <canonical URL>":"") +
-                (etag?" <etag>":""));
-        System.out.println(" - Iterator: " + iteratorClassName);
-        System.out.println("   - " + iterator.getSourceType());
-        System.out.println("Target: " + cargs.get(1));
-        if(addToIndex){
-            System.out.println(" - Add to existing index (if any)");
-        } else {
-            System.out.println(" - New index (erases any existing index at " +
-                    "that location)");
-        }
-
-        // Create the index
-        DigestIndexer di = new DigestIndexer((String)cargs.get(1),indexMode,
-                equivalent, etag,addToIndex);
-        di.writeToIndex(iterator, mimefilter, blacklist, true);
-        
-        // Clean-up
-        di.close();
-        
-        System.out.println("Total run time: " + 
-        		DateUtils.formatMillisecondsToConventional(System.currentTimeMillis()-start));
-    }
 }
