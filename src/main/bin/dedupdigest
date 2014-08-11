@@ -29,5 +29,5 @@ then
     HERITRIX_HOME=`cd "$PRGDIR/.." ; pwd`
 fi
 
-FOREGROUND='true' CLASS_MAIN='is.landsbokasafn.deduplicator.DigestIndexer' \
+FOREGROUND='true' CLASS_MAIN='is.landsbokasafn.deduplicator.IndexingLauncher' \
     JMX_OFF='off' $HERITRIX_HOME/bin/heritrix $@
