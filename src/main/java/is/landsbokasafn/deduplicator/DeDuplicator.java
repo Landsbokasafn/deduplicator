@@ -299,8 +299,8 @@ public class DeDuplicator extends Processor implements InitializingBean {
 
             // Attach revisit profile to CURI. This will inform downstream processors that we've 
             // marked this as a duplicate/revisit
-            String duplicateTimestamp = duplicate.get(DigestIndexer.FIELD_TIMESTAMP);
-            String duplicateURL = duplicate.get(DigestIndexer.FIELD_URL);
+            String duplicateTimestamp = duplicate.get(IndexBuilder.FIELD_TIMESTAMP);
+            String duplicateURL = duplicate.get(IndexBuilder.FIELD_URL);
             
         	IdenticalPayloadDigestRevisit revisitProfile = 
         			new IdenticalPayloadDigestRevisit(curi.getContentDigestString());
@@ -309,7 +309,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
         	String refersToDate = duplicateTimestamp;
        		revisitProfile.setRefersToDate(refersToDate);
         	
-        	String refersToRecordID = duplicate.get(DigestIndexer.FIELD_ORIGINAL_RECORD_ID);
+        	String refersToRecordID = duplicate.get(IndexBuilder.FIELD_ORIGINAL_RECORD_ID);
         	if (refersToRecordID!=null && !refersToRecordID.isEmpty()) {
         		revisitProfile.setRefersToRecordID(refersToRecordID);
         	}
@@ -341,7 +341,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
 	protected Document lookupByURL(CrawlURI curi, Statistics currHostStats) {
 		// Look the CrawlURI's URL up in the index.
 		try {
-			Query query = queryField(DigestIndexer.FIELD_URL, curi.getURI());
+			Query query = queryField(IndexBuilder.FIELD_URL, curi.getURI());
 			ScoreDoc[] hits = searcher.search(query, null, 5).scoreDocs;
 
 			Document doc = null;
@@ -353,7 +353,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
 					// Multiple hits on same exact URL should be rare
 					// See if any have matching content digests
 					doc = searcher.doc(hits[i].doc);
-					String oldDigest = doc.get(DigestIndexer.FIELD_DIGEST);
+					String oldDigest = doc.get(IndexBuilder.FIELD_DIGEST);
 
 					if (oldDigest.equalsIgnoreCase(currentDigest)) {
 						stats.exactURLDuplicates++;
@@ -372,15 +372,15 @@ public class DeDuplicator extends Processor implements InitializingBean {
 			if (getTryCanonical()) {
 				// No exact hits. Let's try lenient matching.
 				String canonicalizedURL = canonicalizer.canonicalize(curi.toString()); 
-				query = queryField(DigestIndexer.FIELD_URL, canonicalizedURL);
+				query = queryField(IndexBuilder.FIELD_URL, canonicalizedURL);
 				hits = searcher.search(query, null, 5).scoreDocs;
 
 				for (int i = 0; i < hits.length; i++) {
 					doc = searcher.doc(hits[i].doc);
-					String indexDigest = doc.get(DigestIndexer.FIELD_DIGEST);
+					String indexDigest = doc.get(IndexBuilder.FIELD_DIGEST);
 					if (indexDigest.equals(currentDigest)) {
 						// Make note in log
-						String equivURL = doc.get(DigestIndexer.FIELD_URL);
+						String equivURL = doc.get(IndexBuilder.FIELD_URL);
 						curi.getAnnotations().add(
 								"equivalentURL:\"" + equivURL + "\"");
 						// Increment statistics counters
@@ -422,7 +422,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
         if (digest != null) {
             currentDigest = Base32.encode((byte[])digest);
         }
-        Query query = queryField(DigestIndexer.FIELD_DIGEST, currentDigest);
+        Query query = queryField(IndexBuilder.FIELD_DIGEST, currentDigest);
         try {
             ScoreDoc[] hits = searcher.search(query, null, 50).scoreDocs; // TODO: Look at value 50
             StringBuffer mirrors = new StringBuffer();
@@ -437,7 +437,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
                 // TODO: Ensure that an exact match is recorded if it exists.
                 for(int i=0 ; i<hits.length && duplicate==null ; i++){
                     Document doc = searcher.doc(hits[i].doc);
-                    String indexURL = doc.get(DigestIndexer.FIELD_URL);
+                    String indexURL = doc.get(IndexBuilder.FIELD_URL);
                     // See if the current hit is an exact match.
                     if(url.equals(indexURL)){
                         duplicate = doc;
@@ -452,7 +452,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
                     // equivalent matches are allowed).
                     if(duplicate == null && getTryCanonical()){
                         String indexNormalizedURL = 
-                            doc.get(DigestIndexer.FIELD_URL_NORMALIZED);
+                            doc.get(IndexBuilder.FIELD_URL_NORMALIZED);
                         if(normalizedURL.equals(indexNormalizedURL)){
                             duplicate = doc;
                             stats.canonicalURLDuplicates++;
@@ -601,7 +601,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
 	 */
 	protected void doAnalysis(CrawlURI curi, Statistics currHostStats, boolean isDuplicate) {
 		try {
-    		Query query = queryField(DigestIndexer.FIELD_URL, curi.getURI());
+    		Query query = queryField(IndexBuilder.FIELD_URL, curi.getURI());
     		ScoreDoc[] hits = searcher.search(query, null, 5).scoreDocs;
     		Document doc = null;
     		if(hits != null && hits.length > 0){
@@ -613,9 +613,9 @@ public class DeDuplicator extends Processor implements InitializingBean {
                     // The format of the timestamp ("yyyy-MM-dd'T'HH:mm:ss'Z'") allows
                     // us to do a greater then (later) or lesser than (earlier)
                     // comparison of the strings.
-    				String timestamp = doc.get(DigestIndexer.FIELD_TIMESTAMP);
+    				String timestamp = doc.get(IndexBuilder.FIELD_TIMESTAMP);
     				if(docToEval == null 
-                            || docToEval.get(DigestIndexer.FIELD_TIMESTAMP)
+                            || docToEval.get(IndexBuilder.FIELD_TIMESTAMP)
                                 .compareTo(timestamp)>0){
     					// Found a more recent hit.
                         docToEval = doc;
@@ -657,10 +657,10 @@ public class DeDuplicator extends Processor implements InitializingBean {
         Date lastFetch = null;
         try {
 			lastFetch = sdf.parse(
-					urlHit.get(DigestIndexer.FIELD_TIMESTAMP));
+					urlHit.get(IndexBuilder.FIELD_TIMESTAMP));
 		} catch (ParseException e) {
 			logger.log(Level.WARNING,"Exception parsing indexed date for " + 
-					urlHit.get(DigestIndexer.FIELD_URL),e);
+					urlHit.get(IndexBuilder.FIELD_URL),e);
 			return;
 		}
 
