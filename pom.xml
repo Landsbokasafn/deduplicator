@@ -3,25 +3,33 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-  <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>7</version>
-  </parent>
+	<parent>
+		<groupId>org.sonatype.oss</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>7</version>
+	</parent>
 
-	<groupId>is.landsbokasafn</groupId>
+	<groupId>is.landsbokasafn.deduplicator</groupId>
 	<artifactId>deduplicator</artifactId>
 	<name>DeDuplicator3 (Heritrix 3 add-on module)</name>
 	<version>3.1.0-SNAPSHOT</version>
-	
-  <packaging>pom</packaging>
+
+	<packaging>pom</packaging>
 	<modules>
 		<module>deduplicator-commons</module>
 		<module>deduplicator-heritrix</module>
 		<module>deduplicator-indexer</module>
 		<module>deduplicator-dist</module>
 	</modules>
-	
+
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>manual</distribution>
+		</license>
+	</licenses>
+
 	<description>
         An add-on module for the web crawler Heritrix 3 that offers a
         means to reduce the amount of duplicate data collected in a
@@ -75,6 +83,18 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<org.archive.heritrix.version>3.3.0-SNAPSHOT</org.archive.heritrix.version>
 	</properties>
+	
+	<!-- Hack to ensure we can deploy a multi-module site under a prefix. See 
+		https://github.com/github/maven-plugins/issues/22#issuecomment-8421445 -->
+	<distributionManagement>
+		<site>
+			<id>github-pages-site</id>
+			<name>Deployment through GitHub's site deployment plugin</name>
+			<url>http://landsbokasafn.github.io/deduplicator/${project.version}/</url>
+		</site>
+	</distributionManagement>
+	
+	
 	<build>
 		<finalName>${project.artifactId}-${project.version}-${buildNumber}</finalName>
 		<plugins>
@@ -90,55 +110,29 @@
 				</configuration>
 			</plugin>
 			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>buildnumber-maven-plugin</artifactId>
-				<version>1.0-beta-1</version>
+				<groupId>com.github.github</groupId>
+				<artifactId>site-maven-plugin</artifactId>
+				<configuration>
+					<!-- must match the server's id -->
+					<server>github</server>
+
+					<!-- The commit message -->
+					<message>Creating site for ${project.version}</message>
+					<!-- The location where the site is uploaded -->
+					<!-- -->
+					<path>${project.distributionManagement.site.url}</path>
+					<!-- Use merge or override the content -->
+					<merge>true</merge>
+				</configuration>
+
 				<executions>
 					<execution>
-						<phase>validate</phase>
 						<goals>
-							<goal>create</goal>
+							<goal>site</goal>
 						</goals>
+						<phase>site-deploy</phase>
 					</execution>
 				</executions>
-				<configuration>
-					<format>{0,date,yyyyMMdd}</format>
-					<items>
-						<item>timestamp</item>
-					</items>
-					<doCheck>false</doCheck>
-					<doUpdate>false</doUpdate>
-				</configuration>
-			</plugin>
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<configuration>
-					<descriptors>
-						<descriptor>
-							src/main/assembly/dist.xml
-						</descriptor>
-						<descriptor>
-							src/main/assembly/src.xml
-						</descriptor>
-					</descriptors>
-					<finalName>${project.artifactId}-${project.version}-${buildNumber}</finalName>
-				</configuration>
-				<executions>
-					<execution>
-						<id>make-assembly</id>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<artifactId>maven-site-plugin</artifactId>
-				<version>3.2</version>
-				<configuration>
-					<locales>en</locales>
-				</configuration>
 			</plugin>
 		</plugins>
 	</build>
@@ -175,6 +169,16 @@
 			</snapshots>
 		</repository>
 	</repositories>
+
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>3.8.1</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
 
 </project>
 

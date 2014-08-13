@@ -4,19 +4,19 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>is.landsbokasafn</groupId>
+		<groupId>is.landsbokasafn.deduplicator</groupId>
 		<artifactId>deduplicator</artifactId>
 		<version>3.1.0-SNAPSHOT</version>
 	</parent>
 	<artifactId>deduplicator-heritrix</artifactId>
-	<name>DeDuplicator Heritrix components</name>
+	<name>DeDuplicator Heritrix Components</name>
 
 
 	<dependencies>
 		<dependency>
-			<groupId>is.landsbokasafn</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>deduplicator-commons</artifactId>
-			<version>3.1.0-SNAPSHOT</version>
+			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.archive.heritrix</groupId>
