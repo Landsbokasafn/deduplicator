@@ -8,3 +8,6 @@
 /.project
 /.classpath
 /.settings
+/adhoc.keystore
+/heritrix_dmesg.log
+/.gitignore
