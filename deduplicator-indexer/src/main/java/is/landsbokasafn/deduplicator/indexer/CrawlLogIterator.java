@@ -30,6 +30,7 @@ import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.util.NoSuchElementException;
 
+import org.apache.commons.io.IOUtils;
 import org.archive.util.DateUtils;
 
 /**
@@ -211,7 +212,7 @@ public class CrawlLogIterator implements CrawlDataIterator {
      * Closes the crawl.log file.
      */
     public void close() throws IOException{
-        in.close();
+        IOUtils.closeQuietly(in);
     }
 
     /*
