@@ -11,6 +11,8 @@
 	<artifactId>deduplicator-dist</artifactId>
 	<name>DeDuplicator Distribution Assembly</name>
 
+	<packaging>pom</packaging>
+
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
