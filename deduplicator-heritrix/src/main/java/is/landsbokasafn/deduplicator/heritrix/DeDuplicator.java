@@ -176,7 +176,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
     protected HashMap<String, Statistics> perHostStats = null;
 
     public void afterPropertiesSet() throws Exception {
-        // Index location
+        // Set up Lucene index
         String indexLocation = getIndexLocation();
         try {
             dReader = DirectoryReader.open(new NIOFSDirectory(new File(indexLocation)));
@@ -185,14 +185,12 @@ public class DeDuplicator extends Processor implements InitializingBean {
         	throw new IllegalArgumentException("Unable to find/open index at " + indexLocation,e);
         } 
         
-        // Matching method
+        // Prepare configurations that can not be altered at runtime
         MatchingMethod matchingMethod = getMatchingMethod();
         lookupByURL = matchingMethod == MatchingMethod.URL;
-
-        // Track per host stats
         statsPerHost = getStatsPerHost();
         
-        // Initialize some internal variables:
+        // Initialize statistics accumulators
         stats = new Statistics();
         if (statsPerHost) {
             perHostStats = new HashMap<String, Statistics>();
@@ -203,39 +201,33 @@ public class DeDuplicator extends Processor implements InitializingBean {
 	@Override
 	protected boolean shouldProcess(CrawlURI curi) {
         if (curi.is2XXSuccess() == false) {
-            // Early return. No point in doing comparison on failed downloads.
-            logger.finest("Not handling " + curi.toString()
-                    + ", did not succeed.");
+            // No point in doing comparison on failed downloads.
+            logger.finest("Not handling " + curi.toString() + ", did not succeed.");
             return false;
         }
         if (curi.isPrerequisite()) {
-            // Early return. Prerequisites are exempt from checking.
-            logger.finest("Not handling " + curi.toString()
-                    + ", prerequisite.");
+            // Prerequisites are exempt from checking. TODO: Is this still valid?
+            logger.finest("Not handling " + curi.toString() + ", prerequisite.");
             return false;
         }
         if (curi.toString().startsWith("http")==false) {
-            // Early return. Non-http documents are not handled at present
-            logger.finest("Not handling " + curi.toString()
-                        + ", non-http.");
+            // Non-http documents are not handled at present
+            logger.finest("Not handling " + curi.toString() + ", non-http.");
             return false;
         }
         if(curi.getContentType() == null){
             // No content type means we can not handle it.
-            logger.finest("Not handling " + curi.toString()
-                    + ", missing content (mime) type");
+            logger.finest("Not handling " + curi.toString() + ", missing content (mime) type");
             return false;
         }
         if(curi.getContentType().matches(getMimeFilter()) == getBlacklist()){
-            // Early return. Does not pass the mime filter
+            // Does not pass the mime filter
             logger.finest("Not handling " + curi.toString()
-                    + ", excluded by mimefilter (" + 
-                    curi.getContentType() + ").");
+                    + ", excluded by mimefilter (" + curi.getContentType() + ").");
             return false;
         }
         if(curi.isRevisit()){
-            // Early return. A previous processor or filter has judged this
-            // CrawlURI to be a revisit
+            // A previous processor or filter has judged this CrawlURI to be a revisit
             logger.finest("Not handling " + curi.toString()
                     + ", already flagged as revisit.");
             return false;
@@ -296,8 +288,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
         			new IdenticalPayloadDigestRevisit(curi.getContentDigestString());
         	
         	revisitProfile.setRefersToTargetURI(duplicateURL);
-        	String refersToDate = duplicateTimestamp;
-       		revisitProfile.setRefersToDate(refersToDate);
+       		revisitProfile.setRefersToDate(duplicateTimestamp);
         	
         	String refersToRecordID = duplicate.get(ORIGINAL_RECORD_ID.name());
         	if (refersToRecordID!=null && !refersToRecordID.isEmpty()) {
@@ -414,12 +405,11 @@ public class DeDuplicator extends Processor implements InitializingBean {
             StringBuffer mirrors = new StringBuffer();
             mirrors.append("mirrors: ");
             String url = curi.toString();
-            String normalizedURL = 
+            String canonicalizedURL = 
             	getTryCanonical() ? canonicalizer.canonicalize(url) : null;
             if(hits != null && hits.length > 0){
                 // Can definitely be more then one
-                // Note: We may find an equivalent match before we find an
-                //       (existing) exact match. 
+                // Note: We may find an equivalent match before we find an (existing) exact match. 
                 // TODO: Ensure that an exact match is recorded if it exists.
                 for(int i=0 ; i<hits.length && duplicate==null ; i++){
                     Document doc = searcher.doc(hits[i].doc);
@@ -437,9 +427,9 @@ public class DeDuplicator extends Processor implements InitializingBean {
                     // If not, then check if it is an equivalent match (if
                     // equivalent matches are allowed).
                     if(duplicate == null && getTryCanonical()){
-                        String indexNormalizedURL = 
+                        String indexCanonicalizedURL = 
                             doc.get(URL_CANONICALIZED.name());
-                        if(normalizedURL.equals(indexNormalizedURL)){
+                        if(canonicalizedURL.equals(indexCanonicalizedURL)){
                             duplicate = doc;
                             stats.canonicalURLDuplicates++;
                             if(statsPerHost){
@@ -447,18 +437,18 @@ public class DeDuplicator extends Processor implements InitializingBean {
                             }
                             curi.getAnnotations().add("equivalentURL:\"" + indexURL + "\"");
                             logger.finest("Found equivalent match for " + 
-                                    curi.toString() + ". Normalized: " + 
-                                    normalizedURL + ". Equivalent to: " + indexURL);
+                                    curi.toString() + ". Canonicalized: " + 
+                                    canonicalizedURL + ". Equivalent to: " + indexURL);
                         }
                     }
                     
                     if(duplicate == null){
-                        // Will only be used if no exact (or equivalent) match
-                        // is found.
+                        // Will only be used if no exact (or equivalent) match is found.
                         mirrors.append(indexURL + " ");
                     }
                 }
                 if(duplicate == null){
+                	// TODO: Handle this scenario
                     stats.mirrorNumber++;
                     if (statsPerHost) {
                         currHostStats.mirrorNumber++;
