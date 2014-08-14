@@ -22,16 +22,16 @@
  */
 package is.landsbokasafn.deduplicator.heritrix;
 
-import static is.landsbokasafn.deduplicator.IndexFields.*;
+import static is.landsbokasafn.deduplicator.IndexFields.DATE;
+import static is.landsbokasafn.deduplicator.IndexFields.DIGEST;
+import static is.landsbokasafn.deduplicator.IndexFields.ORIGINAL_RECORD_ID;
+import static is.landsbokasafn.deduplicator.IndexFields.URL;
+import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -137,18 +137,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
     	kp.put(ATTR_FILTER_MODE, blacklist);
     }
     
-    /* Analysis mode. */
-    public final static String ATTR_ANALYZE_TIMESTAMP = "analyze-timestamp";
-    {
-        setAnalyzeTimestamp(false);
-    }
-    public boolean getAnalyzeTimestamp() {
-        return (Boolean) kp.get(ATTR_ANALYZE_TIMESTAMP);
-    }
-    public void setAnalyzeTimestamp(boolean analyzeTimestamp) {
-		kp.put(ATTR_ANALYZE_TIMESTAMP,analyzeTimestamp);
-    }
-
     /* Should statistics be tracked per host? **/
     public final static String ATTR_STATS_PER_HOST = "stats-per-host";
     {
@@ -321,10 +309,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
         	// Add annotation to crawl.log 
             String annotation = "Revisit:IdenticalPayloadDigest";
             curi.getAnnotations().add(annotation);
-        }
-        
-        if(getAnalyzeTimestamp()){
-            doAnalysis(curi,currHostStats, duplicate!=null);
         }
         
         return ProcessResult.PROCEED;
@@ -512,26 +496,11 @@ public class DeDuplicator extends Processor implements InitializingBean {
         	ret.append("  Mirror hits:       " + stats.mirrorNumber + "\n");
         }
         
-        if(getAnalyzeTimestamp()){
-        	ret.append("  Timestamp predicts: (Where exact URL existed in the index)\n");
-        	ret.append("  Change correctly:  " + stats.timestampChangeCorrect + "\n");
-        	ret.append("  Change falsly:     " + stats.timestampChangeFalse + "\n");
-        	ret.append("  Non-change correct:" + stats.timestampNoChangeCorrect + "\n");
-        	ret.append("  Non-change falsly: " + stats.timestampNoChangeFalse + "\n");
-        	ret.append("  Missing timpestamp:" + stats.timestampMissing + "\n");
-        	
-        }
-        
         if(statsPerHost){
             ret.append("  [Host] [total] [duplicates] [bytes] " +
                     "[bytes discarded] [new] [exact] [equiv]");
             if(lookupByURL==false){
                 ret.append(" [mirror]");
-            }
-            if(getAnalyzeTimestamp()){
-                ret.append(" [change correct] [change falsly]");
-                ret.append(" [non-change correct] [non-change falsly]");
-                ret.append(" [no timestamp]");
             }
             ret.append("\n");
             synchronized (perHostStats) {
@@ -562,18 +531,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
                         ret.append(" ");
                         ret.append(curr.mirrorNumber);
                     }    
-                    if(getAnalyzeTimestamp()){
-                        ret.append(" ");
-                        ret.append(curr.timestampChangeCorrect);
-                        ret.append(" ");
-                        ret.append(curr.timestampChangeFalse);
-                        ret.append(" ");
-                        ret.append(curr.timestampNoChangeCorrect);
-                        ret.append(" ");
-                        ret.append(curr.timestampNoChangeFalse);
-                        ret.append(" ");
-                        ret.append(curr.timestampMissing);
-                    }
                     ret.append("\n");
                 }
             }
@@ -592,121 +549,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
 			ret = ret.substring(0,dot+3);
 		}
 		return ret + "%";
-	}
-
-	/**
-	 * Checks if a CURI would have been deemed a server not modified based on its timestamp.
-	 * This is for analysis only and should not be used in large scale crawls.
-	 * @param curi The CrawlURI to check
-	 * @param currHostStats Statistics object to store results
-	 * @param isDuplicate Whether the CrawlURI was deemed a duplicate by content digest
-	 */
-	protected void doAnalysis(CrawlURI curi, Statistics currHostStats, boolean isDuplicate) {
-		try {
-    		Query query = queryField(URL.name(), curi.getURI());
-    		ScoreDoc[] hits = searcher.search(query, null, 5).scoreDocs;
-    		Document doc = null;
-    		if(hits != null && hits.length > 0){
-                // If there are multiple hits, use the one with the most
-                // recent date.
-                Document docToEval = null;
-    			for(int i=0 ; i<hits.length ; i++){
-                    doc = searcher.doc(hits[i].doc);
-                    // The format of the timestamp ("yyyy-MM-dd'T'HH:mm:ss'Z'") allows
-                    // us to do a greater then (later) or lesser than (earlier)
-                    // comparison of the strings.
-    				String timestamp = doc.get(DATE.name());
-    				if(docToEval == null 
-                            || docToEval.get(DATE.name())
-                                .compareTo(timestamp)>0){
-    					// Found a more recent hit.
-                        docToEval = doc;
-    				}
-    			}
-                doTimestampAnalysis(curi,docToEval, currHostStats, isDuplicate);
-    		}
-        } catch(IOException e){
-            logger.log(Level.SEVERE,"Error accessing index.",e);
-        }
-	}
-	
-	protected void doTimestampAnalysis(CrawlURI curi, Document urlHit, 
-            Statistics currHostStats, boolean isDuplicate){
-        
-        // Compare datestamps (last-modified versus the indexed date)
-        Date lastModified = null;
-        if (curi.getHttpResponseHeader("last-modified") != null) {
-            SimpleDateFormat sdf = 
-            	new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", 
-                        Locale.ENGLISH);
-            try {
-				lastModified = sdf.parse(curi.getHttpResponseHeader("last-modified"));
-			} catch (ParseException e) {
-				logger.log(Level.INFO,"Exception parsing last modified of " + 
-						curi.toString(),e);
-				return;
-			}
-        } else {
-            stats.timestampMissing++;
-            if (statsPerHost) {
-                currHostStats.timestampMissing++;
-                logger.finest("Missing timestamp on " + curi.toString());
-            }
-        	return;
-        }
-        
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        Date lastFetch = null;
-        try {
-			lastFetch = sdf.parse(
-					urlHit.get(DATE.name()));
-		} catch (ParseException e) {
-			logger.log(Level.WARNING,"Exception parsing indexed date for " + 
-					urlHit.get(URL.name()),e);
-			return;
-		}
-
-		if(lastModified.after(lastFetch)){
-			// Header predicts change
-			if(isDuplicate){
-				// But the DeDuplicator did not notice a change.
-                stats.timestampChangeFalse++;
-                if (statsPerHost){
-                    currHostStats.timestampChangeFalse++;
-                }
-                logger.finest("Last-modified falsly predicts change on " + 
-                        curi.toString());
-			} else {
-                stats.timestampChangeCorrect++;
-                if (statsPerHost){
-                    currHostStats.timestampChangeCorrect++;
-                }
-                logger.finest("Last-modified correctly predicts change on " + 
-                        curi.toString());
-			}
-		} else {
-			// Header does not predict change.
-			if(isDuplicate){
-				// And the DeDuplicator verifies that no change had occurred
-                stats.timestampNoChangeCorrect++;
-                if (statsPerHost){
-                    currHostStats.timestampNoChangeCorrect++;
-                }
-                logger.finest("Last-modified correctly predicts no-change on " + 
-                        curi.toString());
-			} else {
-				// As this is particularly bad we'll log the URL at INFO level
-				logger.log(Level.INFO,"Last-modified incorrectly indicated " +
-						"no-change on " + curi.toString() + " " + 
-						curi.getContentType() + ". last-modified: " + 
-                        lastModified + ". Last fetched: " + lastFetch);
-                stats.timestampNoChangeFalse++;
-                if (statsPerHost){
-                    currHostStats.timestampNoChangeFalse++;
-                }
-			}
-		}
-        
 	}
 
     /** Run a simple Lucene query for a single term in a single field.
@@ -769,24 +611,6 @@ class Statistics{
     
     /** The total amount of data represented by all the documents processed **/
     long totalAmount = 0;
-    
-    // Timestamp analysis
-    
-    long timestampChangeCorrect = 0;
-    long timestampChangeFalse = 0;
-    long timestampNoChangeCorrect = 0;
-    long timestampNoChangeFalse = 0;
-    long timestampMissing = 0;
-
-    // ETag analysis;
-    
-    long ETagChangeCorrect = 0;
-    long ETagChangeFalse = 0;
-    long ETagNoChangeCorrect = 0;
-    long ETagNoChangeFalse = 0;
-    long ETagMissingIndex = 0;
-    long ETagMissingCURI = 0;
-    
 
 }
 
