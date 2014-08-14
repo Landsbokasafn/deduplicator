@@ -23,7 +23,6 @@ public class IndexingLauncher {
 	private static final String WHITELIST_CONF_KEY = "deduplicator.whitelist";
 	private static final String ADD_TO_INDEX_CONF_KEY = "deduplicator.add";
 	private static final String ITERATOR_CONF_KEY = "deduplicator.crawldataiterator";
-	private static final String REVISIT_RESOLVER_CONF_KEY = "deduplicator.revistresolver";
 	
 	private static void loadConfiguration() {
 		// Load properties file, either from heritrix.home/conf or
@@ -82,7 +81,6 @@ public class IndexingLauncher {
         String mimefilter = readStringConfig(MIME_CONF_KEY, "^text/.*");
         boolean whitelist = readBooleanConfig(WHITELIST_CONF_KEY, false);
         String iteratorClassName = readStringConfig(ITERATOR_CONF_KEY, WarcIterator.class.getName());
-        String revisitResolverClassName = readStringConfig(REVISIT_RESOLVER_CONF_KEY, null);
     	
 		// Parse command line options    	
         CommandLineParser clp = new CommandLineParser(args,new PrintWriter(System.out));
@@ -112,12 +110,6 @@ public class IndexingLauncher {
 
         // Load the CrawlDataIterator
         CrawlDataIterator iterator = (CrawlDataIterator)Class.forName(iteratorClassName).newInstance();
-        
-        IdenticalPayloadDigestRevisitResolver revisitResolver = null;
-        if (revisitResolverClassName!=null) {
-        	revisitResolver = 
-        			(IdenticalPayloadDigestRevisitResolver)Class.forName(revisitResolverClassName).newInstance();
-        }
 
         // Print initial stuff
         System.out.println("Indexing: " + source);
@@ -129,9 +121,6 @@ public class IndexingLauncher {
                 (etag?" <etag>":""));
         System.out.println(" - Iterator: " + iteratorClassName);
         System.out.println("   - " + iterator.getSourceType());
-        if (revisitResolver!=null) {
-        	System.out.println(" - Revisit resolver: " + revisitResolverClassName);
-        }
         System.out.println("Target: " + target);
         if(addToIndex){
             System.out.println(" - Add to existing index (if any)");
@@ -150,7 +139,7 @@ public class IndexingLauncher {
                 canonical, 
                 etag,
                 addToIndex);
-        di.writeToIndex(iterator, revisitResolver, mimefilter, !whitelist, true);
+        di.writeToIndex(iterator, mimefilter, !whitelist, true);
         
         // Clean-up
         di.close();

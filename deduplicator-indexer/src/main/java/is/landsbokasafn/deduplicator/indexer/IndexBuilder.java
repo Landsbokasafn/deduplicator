@@ -140,7 +140,6 @@ public class IndexBuilder {
      */
     public long writeToIndex(
             CrawlDataIterator dataIt, 
-            IdenticalPayloadDigestRevisitResolver revisitResolver,
             String mimeFilter, 
             boolean blacklist,
             boolean verbose) 
@@ -148,7 +147,7 @@ public class IndexBuilder {
 
         int count = 0;
         int skipped = 0;
-        int resolved = 0;
+        int unresolved = 0;
 
         // Define field types for indexed and non indexed fields. No fields are tokanized
         FieldType ftIndexed = new FieldType();
@@ -176,23 +175,12 @@ public class IndexBuilder {
 
             String url = item.getURL();
             String timestamp = item.getTimestamp();
-            String digest = item.getContentDigest();
+
             if (item.isRevisit()) {
             	if (item.getOriginalURL()==null || item.getOriginalTimestamp()==null) {
-            		// Can't index without those, try the resolver
-            		CrawlDataItem original = null;
-            		if (revisitResolver!=null) {
-            			original = revisitResolver.resolve(url, digest, timestamp, indexDigest);
-            		}
-            		if (original!=null) {
-            			// TODO: Do we need to do any extra checking here or can we just trust the resolver?
-            			url = original.getURL();
-            			timestamp = original.getTimestamp();
-            			resolved++;
-            		} else {
-	                    skipped++;
-	            		continue;
-            		}
+            		// Can't index without information about the original capture 
+        			unresolved++;
+            		continue;
             	} else {
             		url = item.getOriginalURL();
             		timestamp = item.getOriginalTimestamp();
@@ -202,7 +190,7 @@ public class IndexBuilder {
             // Ok, we wish to index this URL/Digest
             count++;
             if(verbose && count%10000==0){
-                System.out.println("Indexed " + count + ", resolved " + resolved + " - Last URL " +
+                System.out.println("Indexed " + count + ", unresolved " + unresolved + " - Last URL " +
                 		"from " + item.getTimestamp());
             }
 
