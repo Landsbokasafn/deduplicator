@@ -27,6 +27,7 @@ import static is.landsbokasafn.deduplicator.IndexFields.DIGEST;
 import static is.landsbokasafn.deduplicator.IndexFields.ORIGINAL_RECORD_ID;
 import static is.landsbokasafn.deduplicator.IndexFields.URL;
 import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
+import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.REVISIT_ANNOTATION_MARKER;
 
 import java.io.File;
 import java.io.IOException;
@@ -298,8 +299,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
         	curi.setRevisitProfile(revisitProfile);
 
         	// Add annotation to crawl.log 
-            String annotation = "Revisit:IdenticalPayloadDigest";
-            curi.getAnnotations().add(annotation);
+            curi.getAnnotations().add(REVISIT_ANNOTATION_MARKER);
         }
         
         return ProcessResult.PROCEED;

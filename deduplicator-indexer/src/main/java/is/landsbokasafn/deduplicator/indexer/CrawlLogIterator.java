@@ -22,6 +22,8 @@
  */
 package is.landsbokasafn.deduplicator.indexer;
 
+import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.REVISIT_ANNOTATION_MARKER;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,6 +33,8 @@ import java.text.ParseException;
 import java.util.NoSuchElementException;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.archive.util.DateUtils;
 
 /**
@@ -41,7 +45,16 @@ import org.archive.util.DateUtils;
  * @author Lars Clausen
  */
 public class CrawlLogIterator implements CrawlDataIterator {
+	private static final Log log = LogFactory.getLog(CrawlLogIterator.class);
 
+	// By default, we look for the standard revisit annotation marker 
+	// to indicate that a crawl line represents a revisit
+	private static final String REVISIT_ANNOTATION_REGEX = "^.*"+REVISIT_ANNOTATION_MARKER + ".*$";
+	private static final String REVISIT_ANNOTATION_REGEX_PROPERTY = 
+			"deduplicator.crawllogiterator.revisit-annotation-regex";
+	
+	private static String revisitMatchingRegex;
+	
     /** 
      * A reader for the crawl.log file being processed
      */
@@ -54,7 +67,10 @@ public class CrawlLogIterator implements CrawlDataIterator {
     protected CrawlDataItem next;
     
     public CrawlLogIterator() {
-    	// Noop constructor
+    	revisitMatchingRegex = System.getProperty(REVISIT_ANNOTATION_REGEX_PROPERTY);
+    	if (revisitMatchingRegex==null) {
+    		revisitMatchingRegex=REVISIT_ANNOTATION_REGEX;
+    	}
     }
     
     /** 
@@ -64,6 +80,7 @@ public class CrawlLogIterator implements CrawlDataIterator {
      * @throws IOException If errors were found reading the log.
      */
     public void initialize(String source) throws IOException {
+    	log.info("Opening " + source);
         in = new BufferedReader(new InputStreamReader(
                 new FileInputStream(new File(source))));
     }
@@ -83,9 +100,7 @@ public class CrawlLogIterator implements CrawlDataIterator {
     /** 
      * Returns the next valid item from the crawl log.
      *
-     * @return An item from the crawl log.  Note that unlike the Iterator
-     *         interface, this method returns null if there are no more items 
-     *         to fetch.
+     * @return An item from the crawl log.  
      * @throws IOException If there is an error reading the item *after* the
      *         item to be returned from the crawl.log.
      * @throws NoSuchElementException If there are no more items 
@@ -102,10 +117,11 @@ public class CrawlLogIterator implements CrawlDataIterator {
     /**
      * Ready the next item.  When the method returns, either next is non-null
      * or there are no more items in the crawl log.
-     * <p>
-     * Note: This method should only be called when <code>next==null<code>
      */
     protected void prepareNext() throws IOException{
+    	if (next!=null) {
+    		throw new IllegalStateException("Can't prepare next, when next is non-null");
+    	}
         String line;
         while ((line = in.readLine()) != null) {
             next = parseLine(line);
@@ -116,7 +132,7 @@ public class CrawlLogIterator implements CrawlDataIterator {
      }
 
     /** 
-     * Parse the a line in the crawl log.
+     * Parse a line in the crawl log.
      * <p>
      * Override this method to change how individual crawl log
      * items are processed and accepted/rejected.  This method is called from
@@ -134,8 +150,7 @@ public class CrawlLogIterator implements CrawlDataIterator {
             String[] lineParts = line.split("\\s+",12);
             
             if(lineParts.length<10){
-                // If the lineParts are fewer then 10 then the line is 
-                // malformed.
+                log.debug("Ignoring malformed line, lineParts are fewer then 10 in line:\n" + line);
                 return null;
             }
             
@@ -144,6 +159,10 @@ public class CrawlLogIterator implements CrawlDataIterator {
             
             // Index 1: status return code 
             int status = Integer.parseInt(lineParts[1]);
+            if (status<=0) {
+            	log.debug("Ignoring failed fetch based on status code. Line:\n" + line);
+            	return null;
+            }
             
             // Index 2: File size (ignore) 
 
@@ -163,7 +182,7 @@ public class CrawlLogIterator implements CrawlDataIterator {
             // Convert from the crawl log dateformat to w3c-iso8601
             try {
             	String fetchBegan = lineParts[8];
-            	fetchBegan = fetchBegan.substring(0,fetchBegan.indexOf("+")); // Ignore + fetch duration
+           		fetchBegan = fetchBegan.substring(0,fetchBegan.indexOf("+")); // Ignore + fetch duration
 				timestamp = DateUtils.getLog14Date(DateUtils.parse17DigitDate(fetchBegan));
 			} catch (ParseException e1) {
 				throw new IOException(e1);
@@ -186,12 +205,9 @@ public class CrawlLogIterator implements CrawlDataIterator {
             String originalURL = null;
             String originalTimestamp = null;
             if(lineParts.length==12){
-
-            	
-            	// FIXME: Read annotation to determine if this is a revisit or not TODO: Make sure proper annotations are made!
-
-            	
-            	
+            	if (lineParts[11].matches(revisitMatchingRegex)) {
+            		revisit=true;
+            	}
             }
             // Got a valid item.
             CrawlDataItem cdi = new CrawlDataItem();

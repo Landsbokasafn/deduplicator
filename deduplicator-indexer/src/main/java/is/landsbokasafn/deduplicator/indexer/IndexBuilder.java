@@ -148,6 +148,7 @@ public class IndexBuilder {
 
         int count = 0;
         int skipped = 0;
+        int resolved = 0;
 
         // Define field types for indexed and non indexed fields. No fields are tokanized
         FieldType ftIndexed = new FieldType();
@@ -187,6 +188,7 @@ public class IndexBuilder {
             			// TODO: Do we need to do any extra checking here or can we just trust the resolver?
             			url = original.getURL();
             			timestamp = original.getTimestamp();
+            			resolved++;
             		} else {
 	                    skipped++;
 	            		continue;
@@ -200,7 +202,7 @@ public class IndexBuilder {
             // Ok, we wish to index this URL/Digest
             count++;
             if(verbose && count%10000==0){
-                System.out.println("Indexed " + count + " - Last URL " +
+                System.out.println("Indexed " + count + ", resolved " + resolved + " - Last URL " +
                 		"from " + item.getTimestamp());
             }
 
