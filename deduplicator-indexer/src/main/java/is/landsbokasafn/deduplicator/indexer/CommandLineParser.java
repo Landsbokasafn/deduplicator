@@ -93,6 +93,9 @@ public class CommandLineParser {
         this.options.addOption(new Option("w","whitelist", false,
                 "Make the --mime filter a whitelist instead of blacklist."));
         
+        this.options.addOption(new Option("v","verbose", false,
+                "Make the program print progress info to standard out."));
+        
         opt = new Option("i","iterator", true,
                 "An iterator suitable for the source data (default iterator " +
                 "works WARC files).");

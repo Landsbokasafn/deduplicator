@@ -23,6 +23,7 @@ public class IndexingLauncher {
 	private static final String WHITELIST_CONF_KEY = "deduplicator.whitelist";
 	private static final String ADD_TO_INDEX_CONF_KEY = "deduplicator.add";
 	private static final String ITERATOR_CONF_KEY = "deduplicator.crawldataiterator";
+	private static final String VERBOSE_CONF_KEY = "deduplicator.verbose";
 	
 	private static void loadConfiguration() {
 		// Load properties file, either from heritrix.home/conf or
@@ -74,6 +75,7 @@ public class IndexingLauncher {
     	loadConfiguration();
 
         // Set default values for all settings
+    	boolean verbose = readBooleanConfig(VERBOSE_CONF_KEY, true);
         boolean etag = readBooleanConfig(ETAG_CONF_KEY, false);
         boolean canonical = readBooleanConfig(CANONICAL_CONF_KEY, false);
         String indexMode = readStringConfig(MODE_CONF_KEY, IndexBuilder.MODE_BOTH);
@@ -96,6 +98,7 @@ public class IndexingLauncher {
             case 'm' : mimefilter = opt.getValue(); break;
             case 'o' : indexMode = opt.getValue(); break;
             case 's' : canonical = true; break;
+            case 'v' : verbose = true; break;
             }
         }
 
@@ -139,7 +142,7 @@ public class IndexingLauncher {
                 canonical, 
                 etag,
                 addToIndex);
-        di.writeToIndex(iterator, mimefilter, !whitelist, true);
+        di.writeToIndex(iterator, mimefilter, !whitelist, verbose);
         
         // Clean-up
         di.close();

@@ -236,9 +236,7 @@ public class IndexBuilder {
             }
             index.updateDocument(new Term(URL.name()), doc);
         }
-        if(verbose){
-            System.out.println("Indexed " + count + " items (skipped " + skipped + ")");
-        }
+        System.out.println("Indexed " + count + " items (unresolved " + unresolved + ", skipped " + skipped + ")");
         return count;
     }
     
