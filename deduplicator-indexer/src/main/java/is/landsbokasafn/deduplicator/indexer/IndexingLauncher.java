@@ -32,7 +32,7 @@ public class IndexingLauncher {
 		if (configFilename == null || configFilename.isEmpty()) {
 			// Configuration file not explicitly set. Use default.
 			// This works if invoked via the provided script. Will fail otherwise unless -Dheritrix.home is set
-			configFilename = System.getProperty("heritrix.home") + File.separator + "conf" + File.separator 
+			configFilename = System.getProperty("deduplicator.home") + File.separator + "conf" + File.separator 
 				+ "deduplicator.properties";							
 		}
 		File configFile = new File(configFilename);

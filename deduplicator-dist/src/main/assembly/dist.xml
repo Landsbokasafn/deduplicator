@@ -11,6 +11,13 @@
 			<useProjectArtifact>false</useProjectArtifact>
 		</dependencySet>
 	</dependencySets>
+	<files>
+		<file>
+			<source>../LICENSE</source>
+			<outputDirectory>deduplicator/lib</outputDirectory>
+			<destName>deduplicator.${project.version}.LICENSE</destName>
+		</file>
+	</files>
 	<fileSets>
 		<fileSet>
 			<directory>target</directory>
@@ -20,8 +27,10 @@
 			</includes>
 		</fileSet>
 		<fileSet>
+			<directory>../deduplicator-indexer/src/main/resources</directory>
+			<outputDirectory>deduplicator/conf</outputDirectory>
 			<includes>
-				<include>LICENSE*</include>
+				<include>*.properties</include>
 			</includes>
 		</fileSet>
 		<fileSet>
