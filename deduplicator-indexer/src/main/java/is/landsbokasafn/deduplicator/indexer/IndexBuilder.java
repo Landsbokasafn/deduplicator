@@ -16,7 +16,11 @@
  */
 package is.landsbokasafn.deduplicator.indexer;
 
-import static is.landsbokasafn.deduplicator.IndexFields.*;
+import static is.landsbokasafn.deduplicator.IndexFields.DATE;
+import static is.landsbokasafn.deduplicator.IndexFields.DIGEST;
+import static is.landsbokasafn.deduplicator.IndexFields.ETAG;
+import static is.landsbokasafn.deduplicator.IndexFields.URL;
+import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +32,9 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause.Occur;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.archive.wayback.util.url.AggressiveUrlCanonicalizer;
@@ -143,7 +150,7 @@ public class IndexBuilder {
         int skipped = 0;
         int unresolved = 0;
 
-        // Define field types for indexed and non indexed fields. No fields are tokanized
+        // Define field types for indexed and non indexed fields. No fields are tokenized
         FieldType ftIndexed = new FieldType();
         ftIndexed.setIndexed(true);
         ftIndexed.setTokenized(false);
@@ -229,7 +236,11 @@ public class IndexBuilder {
                         ftNotIndexed));
             }
             if (indexDigest && indexURL) {
-            	// TODO: Delete any URL+Digest matches from index first
+            	// Delete any URL+Digest matches from index first
+            	BooleanQuery q = new BooleanQuery();
+            	q.add(new TermQuery(new Term(URL.name(), url)), Occur.MUST);
+            	q.add(new TermQuery(new Term(DIGEST.name(), item.getContentDigest())), Occur.MUST);
+            	index.deleteDocuments(q);
             	index.addDocument(doc);
             } else if (indexDigest) {
                 index.updateDocument(new Term(DIGEST.name()), doc);
