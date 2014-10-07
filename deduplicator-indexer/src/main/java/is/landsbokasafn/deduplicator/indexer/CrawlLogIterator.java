@@ -16,6 +16,9 @@
  */
 package is.landsbokasafn.deduplicator.indexer;
 
+import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_DATE;
+import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_PROFILE;
+import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_URI;
 import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.REVISIT_ANNOTATION_MARKER;
 
 import java.io.BufferedReader;
@@ -30,13 +33,15 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.archive.util.DateUtils;
+import org.json.JSONObject;
 
 /**
- * An implementation of a  {@link is.hi.bok.deduplicator.CrawlDataIterator}
- * capable of iterating over a Heritrix's style <code>crawl.log</code>.
+ * <p>An implementation of a  {@link is.landsbokasafn.deduplicator.indexer.CrawlDataIterator}
+ * capable of iterating over a Heritrix's style <code>crawl.log</code>.</p>
+ * <p>For correct handling of duplicates in the crawl log, it is important that 'extra info' logging
+ * was enabled in <pre>CrawlerLoggerModule</pre> in the crawl configuration.</p>
  * 
  * @author Kristinn Sigur&eth;sson
- * @author Lars Clausen
  */
 public class CrawlLogIterator implements CrawlDataIterator {
 	private static final Log log = LogFactory.getLog(CrawlLogIterator.class);
@@ -139,9 +144,8 @@ public class CrawlLogIterator implements CrawlDataIterator {
     protected CrawlDataItem parseLine(String line) throws IOException {
         if (line != null && line.length() > 42) {
             // Split the line up by whitespaces.
-            // Limit to 12 parts (annotations may contain spaces, but will
-            // always be at the end of each line.
-            String[] lineParts = line.split("\\s+",12);
+            // Limit to 13 parts. Annotations containing spaces will break this.
+            String[] lineParts = line.split("\\s+",13);
             
             if(lineParts.length<10){
                 log.debug("Ignoring malformed line, lineParts are fewer then 10 in line:\n" + line);
@@ -149,7 +153,6 @@ public class CrawlLogIterator implements CrawlDataIterator {
             }
             
             // Index 0: Timestamp, this is the time of log writing and not of interest
-            String timestamp;
             
             // Index 1: status return code 
             int status = Integer.parseInt(lineParts[1]);
@@ -174,6 +177,7 @@ public class CrawlLogIterator implements CrawlDataIterator {
             // Index 8: ArcTimeAndDuration, this is the time when fetch begin, followed by a plus 
             //          sign and the number of milliseconds the fetch took.
             // Convert from the crawl log dateformat to w3c-iso8601
+            String timestamp;
             try {
             	String fetchBegan = lineParts[8];
            		fetchBegan = fetchBegan.substring(0,fetchBegan.indexOf("+")); // Ignore + fetch duration
@@ -194,25 +198,34 @@ public class CrawlLogIterator implements CrawlDataIterator {
             
             // Index 10: Source tag (ignore)
             
-            // Index 11: Annotations (may be missing)
+            // Index 11: Annotations 
             boolean revisit = false;
+        	if (lineParts[11].matches(revisitMatchingRegex)) {
+        		revisit=true;
+        	}
+            
+            // Index 12: Extra info in JSON format. May be missing
             String originalURL = null;
             String originalTimestamp = null;
-            if(lineParts.length==12){
-            	if (lineParts[11].matches(revisitMatchingRegex)) {
-            		revisit=true;
-            	}
+        	String revisitProfile = null;
+            if(revisit && lineParts.length==13){
+            	JSONObject extraInfo = new JSONObject(lineParts[12]);
+            	originalURL = extraInfo.getString(EXTRA_REVISIT_URI);
+            	originalTimestamp = extraInfo.getString(EXTRA_REVISIT_DATE);
+            	revisitProfile=extraInfo.getString(EXTRA_REVISIT_PROFILE);
             }
+            
             // Got a valid item.
             CrawlDataItem cdi = new CrawlDataItem();
             cdi.setURL(url);
-            cdi.setOriginalURL(originalURL);
-            cdi.setContentDigest(digest);
             cdi.setTimestamp(timestamp);
-            cdi.setOriginalTimestamp(originalTimestamp);
+            cdi.setStatusCode(status);
+            cdi.setContentDigest(digest);
             cdi.setMimeType(mime);
             cdi.setRevisit(revisit);
-            cdi.setStatusCode(status);
+            cdi.setOriginalURL(originalURL);
+            cdi.setOriginalTimestamp(originalTimestamp);
+            cdi.setRevisitProfile(revisitProfile);
             return cdi;
         } 
         return null;
