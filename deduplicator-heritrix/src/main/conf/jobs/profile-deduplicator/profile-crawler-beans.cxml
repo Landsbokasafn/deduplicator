@@ -467,8 +467,8 @@
 		<!-- <property name="progressLogPath" value="progress-statistics.log" /> -->
 		<!-- <property name="uriErrorsLogPath" value="uri-errors.log" /> -->
 		<!-- <property name="runtimeErrorsLogPath" value="runtime-errors.log" /> -->
-		<!-- <property name="nonfatalErrorsLogPath" value="nonfatal-errors.log" 
-			/> -->
+		<!-- <property name="nonfatalErrorsLogPath" value="nonfatal-errors.log" /> -->
+        <property name="logExtraInfo" value="true" />
 	</bean>
 
 	<!-- SHEETOVERLAYMANAGER: manager of sheets of contextual overlays Autowired 
