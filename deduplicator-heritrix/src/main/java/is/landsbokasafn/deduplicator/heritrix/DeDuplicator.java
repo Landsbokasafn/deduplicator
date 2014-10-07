@@ -458,9 +458,11 @@ public class DeDuplicator extends Processor implements InitializingBean {
     }
     
 	public String report() {
-        StringBuffer ret = new StringBuffer();
-        ret.append("Processor: is.hi.bok.digest.DeDuplicator\n");
-        ret.append("  Function:          Abort processing of duplicate records\n");
+        StringBuilder ret = new StringBuilder();
+        ret.append("Processor: ");
+        ret.append(DeDuplicator.class.getCanonicalName());
+        ret.append("\n");
+        ret.append("  Function:          Set revisit profile on records deemed duplicate by hash comparison\n");
         ret.append("                     - Lookup by " + 
         		(lookupByURL?"url":"digest") + " in use\n");
         ret.append("  Total handled:     " + stats.handledNumber + "\n");
@@ -468,7 +470,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
         		getPercentage(stats.duplicateNumber,stats.handledNumber) + "\n");
         ret.append("  Bytes total:       " + stats.totalAmount + " (" + 
         		ArchiveUtils.formatBytesForDisplay(stats.totalAmount) + ")\n");
-        ret.append("  Bytes discarded:   " + stats.duplicateAmount + " (" + 
+        ret.append("  Bytes duplicte:    " + stats.duplicateAmount + " (" + 
         		ArchiveUtils.formatBytesForDisplay(stats.duplicateAmount) + ") " + 
         		getPercentage(stats.duplicateAmount, stats.totalAmount) + "\n");
         
