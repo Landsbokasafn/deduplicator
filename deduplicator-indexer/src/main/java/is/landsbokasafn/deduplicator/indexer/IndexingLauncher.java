@@ -47,7 +47,7 @@ public class IndexingLauncher {
 		String configFilename = System.getProperty("deduplicator.config");
 		if (configFilename == null || configFilename.isEmpty()) {
 			// Configuration file not explicitly set. Use default.
-			// This works if invoked via the provided script. Will fail otherwise unless -Dheritrix.home is set
+			// This works if invoked via the provided script. Will fail otherwise unless -Ddeduplicator.home is set
 			configFilename = System.getProperty("deduplicator.home") + File.separator + "conf" + File.separator 
 				+ "deduplicator.properties";							
 		}
