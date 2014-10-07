@@ -16,12 +16,15 @@
  */
 package is.landsbokasafn.deduplicator.heritrix;
 
+import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_DATE;
+import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_PROFILE;
+import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_URI;
+import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.REVISIT_ANNOTATION_MARKER;
 import static is.landsbokasafn.deduplicator.IndexFields.DATE;
 import static is.landsbokasafn.deduplicator.IndexFields.DIGEST;
 import static is.landsbokasafn.deduplicator.IndexFields.ORIGINAL_RECORD_ID;
 import static is.landsbokasafn.deduplicator.IndexFields.URL;
 import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
-import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.REVISIT_ANNOTATION_MARKER;
 
 import java.io.File;
 import java.io.IOException;
@@ -133,15 +136,12 @@ public class DeDuplicator extends Processor implements InitializingBean {
     }
     
     /* Should statistics be tracked per host? **/
-    public final static String ATTR_STATS_PER_HOST = "stats-per-host";
-    {
-    	setStatsPerHost(false);
-    }
+   	boolean statsPerHost=false;
     public boolean getStatsPerHost(){
-    	return (Boolean)kp.get(ATTR_STATS_PER_HOST);
+    	return statsPerHost;
     }
     public void setStatsPerHost(boolean statsPerHost){
-    	kp.put(ATTR_STATS_PER_HOST,statsPerHost);
+    	this.statsPerHost=statsPerHost;
     }
 
     // Spring configured access to Heritrix resources
@@ -165,7 +165,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
     protected IndexSearcher searcher = null;
     protected DirectoryReader dReader = null;
     protected boolean lookupByURL = true;
-    protected boolean statsPerHost = false;
     
     protected Statistics stats = null;
     protected HashMap<String, Statistics> perHostStats = null;
@@ -183,7 +182,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
         // Prepare configurations that can not be altered at runtime
         MatchingMethod matchingMethod = getMatchingMethod();
         lookupByURL = matchingMethod == MatchingMethod.URL;
-        statsPerHost = getStatsPerHost();
         
         // Initialize statistics accumulators
         stats = new Statistics();
@@ -294,6 +292,11 @@ public class DeDuplicator extends Processor implements InitializingBean {
 
         	// Add annotation to crawl.log 
             curi.getAnnotations().add(REVISIT_ANNOTATION_MARKER);
+            
+            // Write extra logging information (needs to be enabled in CrawlerLoggerModule)
+            curi.addExtraInfo(EXTRA_REVISIT_PROFILE, revisitProfile.getProfileName());
+            curi.addExtraInfo(EXTRA_REVISIT_URI, revisitProfile.getRefersToTargetURI());
+            curi.addExtraInfo(EXTRA_REVISIT_DATE, revisitProfile.getRefersToDate());
         }
         
         return ProcessResult.PROCEED;

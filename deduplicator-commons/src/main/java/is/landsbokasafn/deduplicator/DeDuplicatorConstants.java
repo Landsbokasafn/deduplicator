@@ -18,4 +18,9 @@ package is.landsbokasafn.deduplicator;
 
 public interface DeDuplicatorConstants {
     public static final String REVISIT_ANNOTATION_MARKER="Revisit:IdenticalPayloadDigest";
+    
+    /* Extra info for crawl log, JSON keys */
+    public static final String EXTRA_REVISIT_PROFILE="RevisitProfile";
+    public static final String EXTRA_REVISIT_URI="RevisitRefersToURI";
+    public static final String EXTRA_REVISIT_DATE="RevisitRefersToDate";
 }
