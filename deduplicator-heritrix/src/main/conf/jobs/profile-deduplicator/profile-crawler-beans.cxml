@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- HERITRIX 3 CRAWL JOB CONFIGURATION FILE This is based on the Heritrix 
-	3.0.0 default profile. The main addition is the inclusion of the Deduplicator 
+	3.3.0 default profile. The main addition is the inclusion of the Deduplicator 
 	module. Commented-out beans and properties are provided as an example; values 
 	shown in comments reflect the actual defaults which are in effect without 
 	specification. (To change from the default behavior, uncomment AND alter 
@@ -8,10 +8,10 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
 	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
-           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.5.xsd
-           http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.5.xsd
-           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd">
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+           http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
 
 	<context:annotation-config />
 
@@ -35,7 +35,16 @@
 				metadata.description=Basic crawl starting with useful defaults
 
 				# Location of DeDuplicator index
-				deduplicator.indexLocation=
+				deduplicatorIndex.indexLocation=
+				# Search strategy for how to search in the index. I.e. when to consider something a match.
+				# Note that the index must have been built in a manner that supports the chosen strategy.  
+				# Allowed values are:
+				#  URL_EXACT  -- Search on URL
+				#  URL_CANONICAL   -- Search on canonical form of URL
+				#  URL_CANONICAL_FALLBACK  -- Search by exact URL and fall back to canonical if needed
+				#  DIGEST_ANY  -- Search by digest
+				#  URL_DIGEST_FALLBACK  -- Search by URL_CANONICAL_FALLBACK and then fallback to DIGEST_ANY
+				deduplicatorIndex.searchStrategy=URL_EXACT
 
 				##..more?..##
 			</value>
@@ -64,6 +73,7 @@
 		<property name="operatorContactUrl" value="[see override above]" />
 		<property name="jobName" value="[see override above]" />
 		<property name="description" value="[see override above]" />
+		<!-- <property name="robotsPolicyName" value="obey"/> -->
 		<!-- <property name="operator" value=""/> -->
 		<!-- <property name="operatorFrom" value=""/> -->
 		<!-- <property name="organization" value=""/> -->
@@ -87,30 +97,40 @@
 			</bean>
 		</property>
 		<!-- <property name='sourceTagSeeds' value='false'/> -->
+		<!-- <property name='blockAwaitingSeedLines' value='-1'/> -->
 	</bean>
 
-	<!-- SEEDS ALTERNATE APPROACH: specifying external seeds.txt file Use either 
-		the above, or this, but not both. -->
+	<!-- SEEDS ALTERNATE APPROACH: specifying external seeds.txt file in the 
+		job directory, similar to the H1 approach. Use either the above, or this, 
+		but not both. -->
 	<!-- <bean id="seeds" class="org.archive.modules.seeds.TextSeedModule"> 
 		<property name="textSource"> <bean class="org.archive.spring.ConfigFile"> 
 		<property name="path" value="seeds.txt" /> </bean> </property> <property 
-		name='sourceTagSeeds' value='false'/> </bean> -->
+		name='sourceTagSeeds' value='false'/> <property name='blockAwaitingSeedLines' 
+		value='-1'/> </bean> -->
+
+	<bean id="acceptSurts"
+		class="org.archive.modules.deciderules.surt.SurtPrefixedDecideRule">
+		<!-- <property name="decision" value="ACCEPT"/> -->
+		<!-- <property name="seedsAsSurtPrefixes" value="true" /> -->
+		<!-- <property name="alsoCheckVia" value="false" /> -->
+		<!-- <property name="surtsSourceFile" value="" /> -->
+		<!-- <property name="surtsDumpFile" value="${launchId}/surts.dump" /> -->
+		<!-- <property name="surtsSource"> <bean class="org.archive.spring.ConfigString"> 
+			<property name="value"> <value> # example.com # http://www.example.edu/path1/ 
+			# +http://(org,example, </value> </property> </bean> </property> -->
+	</bean>
 
 	<!-- SCOPE: rules for which discovered URIs to crawl; order is very important 
 		because last decision returned other than 'NONE' wins. -->
 	<bean id="scope" class="org.archive.modules.deciderules.DecideRuleSequence">
+		<!-- <property name="logToFile" value="false" /> -->
 		<property name="rules">
 			<list>
 				<!-- Begin by REJECTing all... -->
-				<bean class="org.archive.modules.deciderules.RejectDecideRule">
-				</bean>
+				<bean class="org.archive.modules.deciderules.RejectDecideRule" />
 				<!-- ...then ACCEPT those within configured/seed-implied SURT prefixes... -->
-				<bean class="org.archive.modules.deciderules.surt.SurtPrefixedDecideRule">
-					<!-- <property name="seedsAsSurtPrefixes" value="true" /> -->
-					<!-- <property name="alsoCheckVia" value="true" /> -->
-					<!-- <property name="surtsSourceFile" value="" /> -->
-					<!-- <property name="surtsDumpFile" value="surts.dump" /> -->
-				</bean>
+				<ref bean="acceptSurts" />
 				<!-- ...but REJECT those more than a configured link-hop-count from start... -->
 				<bean class="org.archive.modules.deciderules.TooManyHopsDecideRule">
 					<!-- <property name="maxHops" value="20" /> -->
@@ -125,8 +145,9 @@
 				<bean class="org.archive.modules.deciderules.surt.SurtPrefixedDecideRule">
 					<property name="decision" value="REJECT" />
 					<property name="seedsAsSurtPrefixes" value="false" />
-					<property name="surtsDumpFile" value="negative-surts.dump" />
-					<!-- <property name="surtsSourceFile" value="" /> -->
+					<property name="surtsDumpFile" value="${launchId}/negative-surts.dump" />
+					<!-- <property name="surtsSource"> <bean class="org.archive.spring.ConfigFile"> 
+						<property name="path" value="negative-surts.txt" /> </bean> </property> -->
 				</bean>
 				<!-- ...and REJECT those from a configurable (initially empty) set of 
 					URI regexes... -->
@@ -147,19 +168,22 @@
 				<!-- ...but always ACCEPT those marked as prerequisitee for another URI... -->
 				<bean class="org.archive.modules.deciderules.PrerequisiteAcceptDecideRule">
 				</bean>
+				<!-- ...but always REJECT those with unsupported URI schemes -->
+				<bean class="org.archive.modules.deciderules.SchemeNotInSetDecideRule">
+				</bean>
 			</list>
 		</property>
 	</bean>
 
 	<!-- PROCESSING CHAINS Much of the crawler's work is specified by the sequential 
 		application of swappable Processor modules. These Processors are collected 
-		into three 'chains. The CandidateChain is applied to URIs being considered 
+		into three 'chains'. The CandidateChain is applied to URIs being considered 
 		for inclusion, before a URI is enqueued for collection. The FetchChain is 
 		applied to URIs when their turn for collection comes up. The DispositionChain 
 		is applied after a URI is fetched and analyzed/link-extracted. -->
 
 	<!-- CANDIDATE CHAIN -->
-	<!-- processors declared as named beans -->
+	<!-- first, processors are declared as top-level named beans -->
 	<bean id="candidateScoper" class="org.archive.crawler.prefetch.CandidateScoper">
 	</bean>
 	<bean id="preparer" class="org.archive.crawler.prefetch.FrontierPreparer">
@@ -174,20 +198,20 @@
 		<!-- <property name="costAssignmentPolicy"> <ref bean="costAssignmentPolicy" 
 			/> </property> -->
 	</bean>
-	<!-- assembled into ordered CandidateChain bean -->
+	<!-- now, processors are assembled into ordered CandidateChain bean -->
 	<bean id="candidateProcessors" class="org.archive.modules.CandidateChain">
 		<property name="processors">
 			<list>
 				<!-- apply scoping rules to each individual candidate URI... -->
 				<ref bean="candidateScoper" />
-				<!-- ...then prepare those ACCEPTed for enqueuing to frontier. -->
+				<!-- ...then prepare those ACCEPTed to be enqueued to frontier. -->
 				<ref bean="preparer" />
 			</list>
 		</property>
 	</bean>
 
 	<!-- FETCH CHAIN -->
-	<!-- processors declared as named beans -->
+	<!-- first, processors are declared as top-level named beans -->
 	<bean id="preselector" class="org.archive.crawler.prefetch.Preselector">
 		<!-- <property name="recheckScope" value="false" /> -->
 		<!-- <property name="blockAll" value="false" /> -->
@@ -204,7 +228,12 @@
 		<!-- <property name="digestContent" value="true" /> -->
 		<!-- <property name="digestAlgorithm" value="sha1" /> -->
 	</bean>
+	<!-- <bean id="fetchWhois" class="org.archive.modules.fetcher.FetchWhois"> 
+		<property name="specialQueryTemplates"> <map> <entry key="whois.verisign-grs.com" 
+		value="domain %s" /> <entry key="whois.arin.net" value="z + %s" /> <entry 
+		key="whois.denic.de" value="-T dn %s" /> </map> </property> </bean> -->
 	<bean id="fetchHttp" class="org.archive.modules.fetcher.FetchHTTP">
+		<!-- <property name="useHTTP11" value="false" /> -->
 		<!-- <property name="maxLengthBytes" value="0" /> -->
 		<!-- <property name="timeoutSeconds" value="1200" /> -->
 		<!-- <property name="maxFetchKBSec" value="0" /> -->
@@ -219,10 +248,13 @@
 		<!-- <property name="sendRange" value="false" /> -->
 		<!-- <property name="ignoreCookies" value="false" /> -->
 		<!-- <property name="sslTrustLevel" value="OPEN" /> -->
-		<!-- <property name="acceptHeaders"> <list> </list> </property> -->
+		<!-- <property name="acceptHeaders"> <list> <value>Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</value> 
+			</list> </property> -->
 		<!-- <property name="httpBindAddress" value="" /> -->
 		<!-- <property name="httpProxyHost" value="" /> -->
 		<!-- <property name="httpProxyPort" value="0" /> -->
+		<!-- <property name="httpProxyUser" value="" /> -->
+		<!-- <property name="httpProxyPassword" value="" /> -->
 		<!-- <property name="digestContent" value="true" /> -->
 		<!-- <property name="digestAlgorithm" value="sha1" /> -->
 	</bean>
@@ -230,18 +262,15 @@
 
 	<!-- DeDuplicator module defined -->
 	<bean id="deduplicator" class="is.landsbokasafn.deduplicator.heritrix.DeDuplicator">
-		<property name="indexLocation" value="[see override above]" />
-		<!-- <property name="matchingMethod" value="URL" /> -->
-		<!-- <property name="jumpTo" value="disposition" /> -->
-		<!-- <property name="origin" value="" /> -->
-		<!-- <property name="tryEquivalent" value="false" /> -->
+		<property name="index">
+            <bean id="deduplicatorIndex" class="is.landsbokasafn.deduplicator.heritrix.LuceneIndexSearcher">
+                <property name="indexLocation" value="[see override above]" />
+                <property name="searchStrategy" value="[see override above]" />
+            </bean>
+		</property>
 		<!-- <property name="mimeFilter" value="^text/.*" /> -->
 		<!-- <property name="blacklist" value="true" /> -->
-		<!-- <property name="analyzeTimestamp" value="false" /> -->
-		<!-- <property name="changeContentSize" value="false" /> -->
 		<!-- <property name="statsPerHost" value="false" /> -->
-		<!-- <property name="useSparseRengeFilter" value="false" /> -->
-		<!-- <property name="originHandling" value="NONE" /> -->
 	</bean>
 
 
@@ -264,54 +293,59 @@
 	</bean>
 	<bean id="extractorSwf" class="org.archive.modules.extractor.ExtractorSWF">
 	</bean>
-	<!-- assembled into ordered FetchChain bean -->
+	<!-- now, processors are assembled into ordered FetchChain bean -->
 	<bean id="fetchProcessors" class="org.archive.modules.FetchChain">
 		<property name="processors">
 			<list>
-				<!-- recheck scope, if so enabled... -->
+				<!-- re-check scope, if so enabled... -->
 				<ref bean="preselector" />
 				<!-- ...then verify or trigger prerequisite URIs fetched, allow crawling... -->
 				<ref bean="preconditions" />
 				<!-- ...fetch if DNS URI... -->
 				<ref bean="fetchDns" />
+				<!-- <ref bean="fetchWhois"/> -->
 				<!-- ...fetch if HTTP URI... -->
 				<ref bean="fetchHttp" />
 				<!-- ...perform deduplication... -->
 				<ref bean="deduplicator" />
-				<!-- ...extract oulinks from HTTP headers... -->
+				<!-- ...extract outlinks from HTTP headers... -->
 				<ref bean="extractorHttp" />
-				<!-- ...extract oulinks from HTML content... -->
+				<!-- ...extract outlinks from HTML content... -->
 				<ref bean="extractorHtml" />
-				<!-- ...extract oulinks from CSS content... -->
+				<!-- ...extract outlinks from CSS content... -->
 				<ref bean="extractorCss" />
-				<!-- ...extract oulinks from Javascript content... -->
+				<!-- ...extract outlinks from Javascript content... -->
 				<ref bean="extractorJs" />
-				<!-- ...extract oulinks from Flash content... -->
+				<!-- ...extract outlinks from Flash content... -->
 				<ref bean="extractorSwf" />
 			</list>
 		</property>
 	</bean>
 
 	<!-- DISPOSITION CHAIN -->
-	<!-- processors declared as named beans -->
+	<!-- first, processors are declared as top-level named beans -->
 	<bean id="warcWriter" class="org.archive.modules.writer.WARCWriterProcessor">
 		<!-- <property name="compress" value="true" /> -->
 		<!-- <property name="prefix" value="IAH" /> -->
 		<!-- <property name="suffix" value="${HOSTNAME}" /> -->
 		<!-- <property name="maxFileSizeBytes" value="1000000000" /> -->
 		<!-- <property name="poolMaxActive" value="1" /> -->
-		<!-- <property name="poolMaxWaitMs" value="300000" /> -->
+		<!-- <property name="MaxWaitForIdleMs" value="500" /> -->
 		<!-- <property name="skipIdenticalDigests" value="false" /> -->
 		<!-- <property name="maxTotalBytesToWrite" value="0" /> -->
-		<!-- <property name="directory" value="." /> -->
+		<!-- <property name="directory" value="${launchId}" /> -->
 		<!-- <property name="storePaths"> <list> <value>warcs</value> </list> </property> -->
+		<!-- <property name="template" value="${prefix}-${timestamp17}-${serialno}-${heritrix.pid}~${heritrix.hostname}~${heritrix.port}" 
+			/> -->
 		<!-- <property name="writeRequests" value="true" /> -->
 		<!-- <property name="writeMetadata" value="true" /> -->
 		<!-- <property name="writeRevisitForIdenticalDigests" value="true" /> -->
 		<!-- <property name="writeRevisitForNotModified" value="true" /> -->
+		<!-- <property name="startNewFilesOnCheckpoint" value="true" /> -->
 	</bean>
 	<bean id="candidates" class="org.archive.crawler.postprocessor.CandidatesProcessor">
 		<!-- <property name="seedsRedirectNewSeeds" value="true" /> -->
+		<!-- <property name="processErrorOutlinks" value="false" /> -->
 	</bean>
 	<bean id="disposition" class="org.archive.crawler.postprocessor.DispositionProcessor">
 		<!-- <property name="delayFactor" value="5.0" /> -->
@@ -319,19 +353,21 @@
 		<!-- <property name="respectCrawlDelayUpToSeconds" value="300" /> -->
 		<!-- <property name="maxDelayMs" value="30000" /> -->
 		<!-- <property name="maxPerHostBandwidthUsageKbSec" value="0" /> -->
-
 	</bean>
-	<!-- assembled into ordered DispositionChain bean -->
+	<!-- <bean id="rescheduler" class="org.archive.crawler.postprocessor.ReschedulingProcessor"> 
+		<property name="rescheduleDelaySeconds" value="-1" /> </bean> -->
+	<!-- now, processors are assembled into ordered DispositionChain bean -->
 	<bean id="dispositionProcessors" class="org.archive.modules.DispositionChain">
 		<property name="processors">
 			<list>
 				<!-- write to aggregate archival files... -->
 				<ref bean="warcWriter" />
-				<!-- ...send each outlink candidate URI to CandidatesChain, and enqueue 
+				<!-- ...send each outlink candidate URI to CandidateChain, and enqueue 
 					those ACCEPTed to the frontier... -->
 				<ref bean="candidates" />
 				<!-- ...then update stats, shared-structures, frontier decisions -->
 				<ref bean="disposition" />
+				<!-- <ref bean="rescheduler" /> -->
 			</list>
 		</property>
 	</bean>
@@ -340,7 +376,7 @@
 	<bean id="crawlController" class="org.archive.crawler.framework.CrawlController">
 		<!-- <property name="maxToeThreads" value="25" /> -->
 		<!-- <property name="pauseAtStart" value="true" /> -->
-		<!-- <property name="pauseAtFinish" value="false" /> -->
+		<!-- <property name="runWhileEmpty" value="false" /> -->
 		<!-- <property name="recorderInBufferBytes" value="524288" /> -->
 		<!-- <property name="recorderOutBufferBytes" value="16384" /> -->
 		<!-- <property name="scratchDir" value="scratch" /> -->
@@ -348,7 +384,6 @@
 
 	<!-- FRONTIER: Record of all URIs discovered and queued-for-collection -->
 	<bean id="frontier" class="org.archive.crawler.frontier.BdbFrontier">
-		<!-- <property name="holdQueues" value="true" /> -->
 		<!-- <property name="queueTotalBudget" value="-1" /> -->
 		<!-- <property name="balanceReplenishAmount" value="3000" /> -->
 		<!-- <property name="errorPenaltyAmount" value="100" /> -->
@@ -360,6 +395,7 @@
 		<!-- <property name="maxRetries" value="30" /> -->
 		<!-- <property name="recoveryLogEnabled" value="true" /> -->
 		<!-- <property name="maxOutlinks" value="6000" /> -->
+		<!-- <property name="extractIndependently" value="false" /> -->
 		<!-- <property name="outbound"> <bean class="java.util.concurrent.ArrayBlockingQueue"> 
 			<constructor-arg value="200"/> <constructor-arg value="true"/> </bean> </property> -->
 		<!-- <property name="inbound"> <bean class="java.util.concurrent.ArrayBlockingQueue"> 
@@ -372,6 +408,74 @@
 	<bean id="uriUniqFilter" class="org.archive.crawler.util.BdbUriUniqFilter">
 	</bean>
 
+	<!-- EXAMPLE SETTINGS OVERLAY SHEETS Sheets allow some settings to vary 
+		by context - usually by URI context, so that different sites or sections 
+		of sites can be treated differently. Here are some example Sheets for common 
+		purposes. The SheetOverlaysManager (below) automatically collects all Sheet 
+		instances declared among the original beans, but others can be added during 
+		the crawl via the scripting interface. -->
+
+	<!-- forceRetire: any URI to which this sheet's settings are applied will 
+		force its containing queue to 'retired' status. -->
+	<bean id='forceRetire' class='org.archive.spring.Sheet'>
+		<property name='map'>
+			<map>
+				<entry key='disposition.forceRetire' value='true' />
+			</map>
+		</property>
+	</bean>
+
+	<!-- smallBudget: any URI to which this sheet's settings are applied will 
+		give its containing queue small values for balanceReplenishAmount (causing 
+		it to have shorter 'active' periods while other queues are waiting) and queueTotalBudget 
+		(causing the queue to enter 'retired' status once that expenditure is reached 
+		by URI attempts and errors) -->
+	<bean id='smallBudget' class='org.archive.spring.Sheet'>
+		<property name='map'>
+			<map>
+				<entry key='frontier.balanceReplenishAmount' value='20' />
+				<entry key='frontier.queueTotalBudget' value='100' />
+			</map>
+		</property>
+	</bean>
+
+	<!-- veryPolite: any URI to which this sheet's settings are applied will 
+		cause its queue to take extra-long politeness snoozes -->
+	<bean id='veryPolite' class='org.archive.spring.Sheet'>
+		<property name='map'>
+			<map>
+				<entry key='disposition.delayFactor' value='10' />
+				<entry key='disposition.minDelayMs' value='10000' />
+				<entry key='disposition.maxDelayMs' value='1000000' />
+				<entry key='disposition.respectCrawlDelayUpToSeconds' value='3600' />
+			</map>
+		</property>
+	</bean>
+
+	<!-- highPrecedence: any URI to which this sheet's settings are applied 
+		will give its containing queue a slightly-higher than default queue precedence 
+		value. That queue will then be preferred over other queues for active crawling, 
+		never waiting behind lower- precedence queues. -->
+	<bean id='highPrecedence' class='org.archive.spring.Sheet'>
+		<property name='map'>
+			<map>
+				<entry key='frontier.balanceReplenishAmount' value='20' />
+				<entry key='frontier.queueTotalBudget' value='100' />
+			</map>
+		</property>
+	</bean>
+
+	<!-- EXAMPLE SETTINGS OVERLAY SHEET-ASSOCIATION A SheetAssociation says 
+		certain URIs should have certain overlay Sheets applied. This example applies 
+		two sheets to URIs matching two SURT-prefixes. New associations may also 
+		be added mid-crawl using the scripting facility. -->
+
+	<!-- <bean class='org.archive.crawler.spring.SurtPrefixesSheetAssociation'> 
+		<property name='surtPrefixes'> <list> <value>http://(org,example,</value> 
+		<value>http://(com,example,www,)/</value> </list> </property> <property name='targetSheetNames'> 
+		<list> <value>veryPolite</value> <value>smallBudget</value> </list> </property> 
+		</bean> -->
+
 	<!-- OPTIONAL BUT RECOMMENDED BEANS -->
 
 	<!-- ACTIONDIRECTORY: disk directory for mid-crawl operations Running job 
@@ -379,6 +483,7 @@
 		be processed during a crawl. -->
 	<bean id="actionDirectory" class="org.archive.crawler.framework.ActionDirectory">
 		<!-- <property name="actionDir" value="action" /> -->
+		<!-- <property name="doneDir" value="${launchId}/actions-done" /> -->
 		<!-- <property name="initialDelaySeconds" value="10" /> -->
 		<!-- <property name="delaySeconds" value="30" /> -->
 	</bean>
@@ -394,6 +499,7 @@
 	<bean id="checkpointService" class="org.archive.crawler.framework.CheckpointService">
 		<!-- <property name="checkpointIntervalMinutes" value="-1"/> -->
 		<!-- <property name="checkpointsDir" value="checkpoints"/> -->
+		<!-- <property name="forgetAllButLatest" value="true"/> -->
 	</bean>
 
 	<!-- OPTIONAL BEANS Uncomment and expand as needed, or if non-default alternate 
@@ -426,6 +532,13 @@
 	<!-- <bean id="credentialStore" class="org.archive.modules.credential.CredentialStore"> 
 		</bean> -->
 
+	<!-- DISK SPACE MONITOR: Pauses the crawl if disk space at monitored paths 
+		falls below minimum threshold -->
+	<!-- <bean id="diskSpaceMonitor" class="org.archive.crawler.monitor.DiskSpaceMonitor"> 
+		<property name="pauseThresholdMiB" value="500" /> <property name="monitorConfigPaths" 
+		value="true" /> <property name="monitorPaths"> <list> <value>PATH</value> 
+		</list> </property> </bean> -->
+
 	<!-- REQUIRED STANDARD BEANS It will be very rare to replace or reconfigure 
 		the following beans. -->
 
@@ -452,7 +565,7 @@
 				</bean>
 			</list>
 		</property>
-		<!-- <property name="reportsDir" value="reports" /> -->
+		<!-- <property name="reportsDir" value="${launchId}/reports" /> -->
 		<!-- <property name="liveHostReportSize" value="20" /> -->
 		<!-- <property name="intervalSeconds" value="20" /> -->
 		<!-- <property name="keepSnapshotsCount" value="5" /> -->
@@ -461,7 +574,7 @@
 
 	<!-- CRAWLERLOGGERMODULE: shared logging facility -->
 	<bean id="loggerModule" class="org.archive.crawler.reporting.CrawlerLoggerModule">
-		<!-- <property name="path" value="logs" /> -->
+		<!-- <property name="path" value="${launchId}/logs" /> -->
 		<!-- <property name="crawlLogPath" value="crawl.log" /> -->
 		<!-- <property name="alertsLogPath" value="alerts.log" /> -->
 		<!-- <property name="progressLogPath" value="progress-statistics.log" /> -->
@@ -480,16 +593,19 @@
 	<!-- BDBMODULE: shared BDB-JE disk persistence manager -->
 	<bean id="bdb" class="org.archive.bdb.BdbModule">
 		<!-- <property name="dir" value="state" /> -->
-		<!-- <property name="cachePercent" value="60" /> -->
+		<!-- if neither cachePercent or cacheSize are specified (the default), 
+			bdb uses its own default of 60% -->
+		<property name="cachePercent" value="40" />
+		<!-- <property name="cacheSize" value="0" /> -->
 		<!-- <property name="useSharedCache" value="true" /> -->
 		<!-- <property name="expectedConcurrency" value="25" /> -->
 	</bean>
 
-	<!-- BDBCOOKIESTORAGE: disk-based cookie storage for FetchHTTP -->
-	<bean id="cookieStorage" class="org.archive.modules.fetcher.BdbCookieStore">
+	<!-- BDBCOOKIESTORE: disk-based cookie storage for FetchHTTP -->
+	<bean id="cookieStore" class="org.archive.modules.fetcher.BdbCookieStore">
 		<!-- <property name="cookiesLoadFile"><null/></property> -->
 		<!-- <property name="cookiesSaveFile"><null/></property> -->
-		<!-- <property name="bdb"> <ref bean="bdb"/> </property> -->
+		<!-- <property name="bdbModule"> <ref bean="bdb"/> </property> -->
 	</bean>
 
 	<!-- SERVERCACHE: shared cache of server/host info -->

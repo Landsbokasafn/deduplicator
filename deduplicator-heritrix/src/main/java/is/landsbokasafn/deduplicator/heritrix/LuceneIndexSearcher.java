@@ -31,7 +31,7 @@ import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.store.NIOFSDirectory;
 import org.springframework.beans.factory.InitializingBean;
 
-public class LuceneIndexSearcher implements InitializingBean {
+public class LuceneIndexSearcher implements Index, InitializingBean {
     private static Logger logger = Logger.getLogger(LuceneIndexSearcher.class.getName());
 
     protected IndexSearcher searcher = null;
@@ -61,13 +61,13 @@ public class LuceneIndexSearcher implements InitializingBean {
      * @param strategy The search strategy to employ
      * @see SearchStrategy
      */
-	public void setStrategy(SearchStrategy strategy) {
+	public void setSearchStrategy(SearchStrategy strategy) {
 		if (searcher!=null) {
 			verifyStrategy(strategy);
 		}
 		this.strategy = strategy;
 	}
-	public SearchStrategy getStrategy() {
+	public SearchStrategy getSearchStrategy() {
 		return strategy;
 	}
 	
@@ -158,7 +158,8 @@ public class LuceneIndexSearcher implements InitializingBean {
     	return true;
     }
     
-    public Duplicate lookup(String url, String canonicalizedURL, String digest) {
+    @Override
+	public Duplicate lookup(String url, String canonicalizedURL, String digest) {
     	switch (strategy) {
 		case URL_EXACT:
 			return lookupExactUrl(url, digest);
@@ -261,5 +262,14 @@ public class LuceneIndexSearcher implements InitializingBean {
         }
         return duplicate;
     }
-	
+
+	public void close() {
+		try {
+			if (dReader != null) {
+				dReader.close();
+			}
+		} catch (IOException e) {
+			logger.log(Level.SEVERE,"Error closing index",e);
+		}
+	}
 }
