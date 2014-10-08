@@ -41,8 +41,6 @@ import org.archive.wayback.util.url.AggressiveUrlCanonicalizer;
 
 /**
  * A class for building a de-duplication index.
- * <p>
- * This class also defines string constants for the lucene field names.
  *
  * @author Kristinn Sigur&eth;sson
  * 
@@ -131,9 +129,6 @@ public class IndexBuilder {
      * @param blacklist If true then the <code>mimefilter</code> is used
      *                  as a blacklist for mimetypes. If false then the
      *                  <code>mimefilter</code> is treated as a whitelist. 
-     * @param defaultOrigin If an item is missing an origin, this default value
-     *                      will be assigned to it. Can be null if no default
-     *                      origin value should be assigned.
      * @param verbose If true then progress information will be sent to 
      *                System.out.
      * @return The number of items added to the index.
