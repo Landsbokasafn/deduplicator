@@ -28,8 +28,10 @@ import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -353,20 +355,13 @@ public class DeDuplicator extends Processor implements InitializingBean {
 					doc = searcher.doc(hits[i].doc);
 					String indexDigest = doc.get(DIGEST.name());
 					if (indexDigest.equals(currentDigest)) {
-						// Make note in log
-						String equivURL = doc.get(URL.name());
-						curi.getAnnotations().add(
-								"equivalentURL:\"" + equivURL + "\"");
 						// Increment statistics counters
 						stats.canonicalURLDuplicates++;
 						if (statsPerHost) {
 							currHostStats.canonicalURLDuplicates++;
 						}
-						logger.finest("Found equivalent match for "
-								+ curi.toString() + ". Canonicalized: "
-								+ canonicalizedURL + ". Equivalent to: "
-								+ equivURL);
-
+						logger.finest("Found canonical match for " + curi.getURI() + 
+								". Canonicalized: " + canonicalizedURL);
 						// If we found a hit, no need to look at more.
 						return doc;
 					}
@@ -375,7 +370,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
 		} catch (IOException e) {
 			logger.log(Level.SEVERE, "Error accessing index.", e);
 		}
-		// If we make it here then this is not a duplicate.
+		// If we make it here then there isn't a duplicate for this url in the index
 		return null;
 	}
     
@@ -530,14 +525,9 @@ public class DeDuplicator extends Processor implements InitializingBean {
 	}
 	
 	protected static String getPercentage(double portion, double total){
-		double value = portion / total;
-		value = value*100;
-		String ret = Double.toString(value);
-		int dot = ret.indexOf('.');
-		if(dot+3<ret.length()){
-			ret = ret.substring(0,dot+3);
-		}
-		return ret + "%";
+		NumberFormat percentFormat = NumberFormat.getPercentInstance(Locale.ENGLISH);
+		percentFormat.setMaximumFractionDigits(1);
+		return percentFormat.format(portion/total);
 	}
 
     /** Run a simple Lucene query for a single term in a single field.
