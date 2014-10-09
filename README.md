@@ -1,58 +1,10 @@
 DeDuplicator
 ============
 
-Deduplicator addon for Heritrix 3
+[![Build Status](https://travis-ci.org/Landsbokasafn/deduplicator.png?branch=master)](https://travis-ci.org/Landsbokasafn/deduplicator/)
 
-Building an index
------------------
+DeDuplicator add-on for Heritrix 3
 
-1. A functional installation of Heritrix is required for this software to work. While Heritrix can be 
-   deployed on non-Linux operating systems that requires some degree of work as the bundled scripts are 
-   written for Linux. The same applies to this software and the following instructions assume that Heritrix 
-   is installed on a Linux machine under $HERITRIX_HOME.
+See further on the [DeDuplicator site](https://landsbokasafn.github.io/DeDuplicator/).
 
-2. Install the DeDuplicator software. The jar files should be included in $HERITRIX_HOME/lib/ while the dedupdigest 
-   script should be added to $HERITRIX_HOME/bin/. If you've downloaded a .tar.gz (.zip) bundle, explode it into 
-   $HERITRIX_HOME and all the files will be correctly deployed.
-
-3. Make the dedupdigest script executable with chmod u+x $HERITRIX_HOME/bin/dedupdigest
-
-4. Run $HERITRIX_HOME/bin/dedupdigest --help This will display the usage information for the indexing. The 
-   program takes two arguments, the source data (crawl.log usually) and the target directory where the index will 
-   be written (will be created if not present). Several options are provided to custom tailor the type of index.
-
-5. Create an index. A typical index can be built with $HERITRIX_HOME/bin/dedupdigest -o URL -s -t 
-  <location of crawl.log> <index output directory> This will create an index that is indexed by URL only 
-  (not by the content digest) and includes equivalent URLs and timestamps.
-
-Using the index
----------------
-
-1. Having built an appropriate index, launch Heritrix. Make sure that the installation of Heritrix that you launched 
-   has the two JARs that come with the DeDuplicator (deduplicator-[version].jar and lucene-[version].jar) if it is 
-   not the same one used for creating the index.
-  
-2. Configure a crawl job as normal except add the DeDuplicator processor to the processing chain at some point 
-   after the HTTPFetcher processor and prior to any processor which should be skipped if a duplicate is detected. 
-   When the DeDuplicator finds a duplicate the processing moves straight to the PostProcessing chain. So if you 
-   insert it at the top of the Extractor chain you can skip both link extraction and writing to disk. If you do 
-   not wish to skip link extraction you can insert the processor at the end of the link extraction chain etc.
-  
-3. The DeDuplicator processor has several configurable parameters.
-   * *enabled* Standard Heritrix property for processors. Should be true. Setting it to false will disable the processor./li
-   * *index-location* The most important setting. A full path to the directory that contains the index (output directory of the indexing.)
-   * *matching-method* Whether to lookup URLs or content digests first when looking for matches. This setting depends on how the index was built (indexing mode). If it was set to BOTH then either setting will work. Otherwise it must be set according to the indexing mode.
-   * *try-equivalent* Should equivalent URLs be tried if an exact URL and content digest match is not found. Using equivalent matches means that duplicate documents whose URLs differ only in the parameter list or because of www[0-9]* prefixes are detected.
-   * *mime-filter* Which documents to process
-   * *filter-mode*
-   * *analysis-mode* Enables analysis of the usefulness and accuracy of header information in predicting change and non-change in documents. For statistical gathering purposes only.
-   * *log-level* Enables more logging.
-   * *stats-per-host* Maintains statistics per host in addition to the crawl wide stats.
-    
-4. Once the processor has been configured the crawl can be started and run normally. Information about the processor 
-   is available via the Processor report in the Heritrix GUI (this is saved to processors-report.txt at the end of a 
-   crawl).
-
-Duplicate URLs will still show up in the crawl log but with a note 'duplicate' in the annotation field at the end of 
-the log line.
-
+[Getting started guide](https://landsbokasafn.github.io/DeDuplicator/started.html).

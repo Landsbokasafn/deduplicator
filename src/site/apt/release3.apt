@@ -4,7 +4,7 @@ Release History - DeDuplicator for Heritrix 3
   The following is a list of releases of the DeDuplicator for Heritrix 3. For Heritrix 1 see 
   {{{./release.html}here}}.   
   
-  There are no stable releases of DeDuplicator for Heritrix 3. The current SNAPSHOT build is believed stable.
+  Current stable release is 3.0.0. 
 
 * {3.0.0} (Stable)
 ~~~~~~~~~~~~~~~~~~

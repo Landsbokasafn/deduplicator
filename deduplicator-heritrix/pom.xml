@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>is.landsbokasafn.deduplicator</groupId>
+		<artifactId>deduplicator</artifactId>
+		<version>3.1.0-SNAPSHOT</version>
+	</parent>
+	<artifactId>deduplicator-heritrix</artifactId>
+	<name>DeDuplicator Heritrix Components</name>
+
+
+	<dependencies>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>deduplicator-commons</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.archive.heritrix</groupId>
+			<artifactId>heritrix-commons</artifactId>
+			<version>${org.archive.heritrix.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.archive.heritrix</groupId>
+			<artifactId>heritrix-modules</artifactId>
+			<version>${org.archive.heritrix.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.archive.heritrix</groupId>
+			<artifactId>heritrix-engine</artifactId>
+			<version>${org.archive.heritrix.version}</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+</project>
