@@ -12,7 +12,7 @@
 	<name>DeDuplicator Distribution Assembly</name>
 
 	<packaging>pom</packaging>
-
+	
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -24,10 +24,39 @@
 			<artifactId>deduplicator-indexer</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.archive.heritrix</groupId>
+			<artifactId>heritrix</artifactId>
+			<version>${org.archive.heritrix.version}</version>
+			<classifier>dist</classifier>
+			<type>tar.gz</type>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
+			<!-- Unzip Heritrix distribution -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>unpack-heritrix</id>
+						<goals>
+							<goal>unpack-dependencies</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<outputDirectory>${project.build.directory}/heritrix</outputDirectory>
+							<includeGroupIds>org.archive.heritrix</includeGroupIds>
+							<excludeTransitive>true</excludeTransitive>
+							<excludeTypes>pom</excludeTypes>
+							<scope>test</scope>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>2.4</version>
