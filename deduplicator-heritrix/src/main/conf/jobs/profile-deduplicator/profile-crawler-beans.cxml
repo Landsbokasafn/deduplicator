@@ -259,7 +259,6 @@
 	</bean>
 
 
-	<!-- DeDuplicator module defined -->
     <!-- DeDuplicator module defined -->
     <bean id="deduplicator" class="is.landsbokasafn.deduplicator.heritrix.DeDuplicator">
         <property name="index">

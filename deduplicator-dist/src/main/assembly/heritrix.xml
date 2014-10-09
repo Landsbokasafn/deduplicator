@@ -7,7 +7,7 @@
 	<includeBaseDirectory>false</includeBaseDirectory>
 	<dependencySets>
 		<dependencySet>
-			<outputDirectory>/lib</outputDirectory>
+			<outputDirectory>/heritrix-${org.archive.heritrix.version}/lib</outputDirectory>
 			<includes>
 				<include>org.apache.lucene:lucene-analyzers-common</include>
 				<include>org.apache.lucene:lucene-core</include>
@@ -20,32 +20,39 @@
 	<files>
 		<file>
 			<source>../LICENSE</source>
-			<outputDirectory>lib</outputDirectory>
+			<outputDirectory>/heritrix-${org.archive.heritrix.version}/lib</outputDirectory>
 			<destName>deduplicator.${project.version}.LICENSE</destName>
 		</file>
 	</files>
 	<fileSets>
 		<fileSet>
+			<directory>target/heritrix</directory>
+			<outputDirectory>/</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		<fileSet>
 			<directory>src/main/licenses</directory>
-			<outputDirectory>/lib</outputDirectory>
+			<outputDirectory>/heritrix-${org.archive.heritrix.version}/lib</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>../deduplicator-heritrix/target</directory>
-			<outputDirectory>lib</outputDirectory>
+			<outputDirectory>/heritrix-${org.archive.heritrix.version}/lib</outputDirectory>
 			<includes>
 				<include>*.jar</include>
 			</includes>
 		</fileSet>
 		<fileSet>
 			<directory>../deduplicator-commons/target</directory>
-			<outputDirectory>lib</outputDirectory>
+			<outputDirectory>/heritrix-${org.archive.heritrix.version}/lib</outputDirectory>
 			<includes>
 				<include>*.jar</include>
 			</includes>
 		</fileSet>
 		<fileSet>
 			<directory>../deduplicator-heritrix/src/main/conf/jobs</directory>
-			<outputDirectory>/jobs</outputDirectory>
+			<outputDirectory>/heritrix-${org.archive.heritrix.version}/jobs</outputDirectory>
 		</fileSet>
 	</fileSets>
 </assembly>
