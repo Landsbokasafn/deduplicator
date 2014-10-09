@@ -23,6 +23,7 @@ import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -261,6 +262,31 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
             logger.log(Level.SEVERE,"Error accessing index.",e);
         }
         return duplicate;
+    }
+    
+    public String getInfo() {
+    	StringBuilder sb = new StringBuilder();
+    	sb.append(LuceneIndexSearcher.class.getCanonicalName());
+    	sb.append("\n");
+    	sb.append(" URL indexed: " + urlIndexed);
+    	sb.append("\n");
+    	sb.append(" Digest indexed: " + digestIndexed);
+    	sb.append("\n");
+    	sb.append(" Canonical URL available: " + canoncialAvailable);
+    	sb.append("\n");
+    	sb.append(" Search strategy: " + getSearchStrategy());
+    	sb.append("\n");
+		sb.append(" Documents in index: ");
+        try {
+			CollectionStatistics urlStats = searcher.collectionStatistics(URL.name());
+			sb.append(urlStats.maxDoc());
+		} catch (IOException e) {
+			logger.log(Level.SEVERE,"Error accessing URL statistics of index " + indexLocation, e);
+			sb.append("unavailable");
+		}
+    	sb.append("\n");
+    	
+    	return sb.toString();
     }
 
 	public void close() {

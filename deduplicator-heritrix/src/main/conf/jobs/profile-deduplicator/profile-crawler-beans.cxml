@@ -25,17 +25,16 @@
 		class="org.springframework.beans.factory.config.PropertyOverrideConfigurer">
 		<property name="properties">
 			<value>
-				# This Properties map is specified in the Java 'property list' text
-				format
-				#
-				http://java.sun.com/javase/6/docs/api/java/util/Properties.html#load%28java.io.Reader%29
+				# This Properties map is specified in the Java 'property list' text format
+				# http://java.sun.com/javase/6/docs/api/java/util/Properties.html#load%28java.io.Reader%29
 
 				metadata.operatorContactUrl=ENTER_AN_URL_WITH_YOUR_CONTACT_INFO_HERE_FOR_WEBMASTERS_AFFECTED_BY_YOUR_CRAWL
 				metadata.jobName=basic
 				metadata.description=Basic crawl starting with useful defaults
 
 				# Location of DeDuplicator index
-				deduplicatorIndex.indexLocation=
+				deduplicatorIndex.indexLocation=ENTER_THE_LOCATION_OF_YOUR_INDEX_HERE
+				
 				# Search strategy for how to search in the index. I.e. when to consider something a match.
 				# Note that the index must have been built in a manner that supports the chosen strategy.  
 				# Allowed values are:
@@ -261,17 +260,19 @@
 
 
 	<!-- DeDuplicator module defined -->
-	<bean id="deduplicator" class="is.landsbokasafn.deduplicator.heritrix.DeDuplicator">
-		<property name="index">
-            <bean id="deduplicatorIndex" class="is.landsbokasafn.deduplicator.heritrix.LuceneIndexSearcher">
-                <property name="indexLocation" value="[see override above]" />
-                <property name="searchStrategy" value="[see override above]" />
-            </bean>
-		</property>
-		<!-- <property name="mimeFilter" value="^text/.*" /> -->
-		<!-- <property name="blacklist" value="true" /> -->
-		<!-- <property name="statsPerHost" value="false" /> -->
-	</bean>
+    <!-- DeDuplicator module defined -->
+    <bean id="deduplicator" class="is.landsbokasafn.deduplicator.heritrix.DeDuplicator">
+        <property name="index">
+            <ref bean="deduplicatorIndex" />
+        </property>
+        <!-- <property name="mimeFilter" value="^text/.*" /> -->
+        <!-- <property name="blacklist" value="true" /> -->
+        <!-- <property name="statsPerHost" value="false" /> -->
+    </bean>
+    <bean id="deduplicatorIndex" class="is.landsbokasafn.deduplicator.heritrix.LuceneIndexSearcher">
+        <property name="indexLocation" value="[see override above]" />
+        <property name="searchStrategy" value="[see override above]" />
+    </bean>
 
 
 	<bean id="extractorHttp" class="org.archive.modules.extractor.ExtractorHTTP">

@@ -12,6 +12,6 @@ public interface Index {
 	 */
 	Duplicate lookup(String url, String canonicalizedURL, String digest);
 	
-	SearchStrategy getSearchStrategy();
+	String getInfo();
 
 }

@@ -245,8 +245,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
         ret.append(DeDuplicator.class.getCanonicalName());
         ret.append("\n");
         ret.append("  Function:          Set revisit profile on records deemed duplicate by hash comparison\n");
-        ret.append("                     - Search strategy is " + 
-        		index.getSearchStrategy().name() + "\n");
         ret.append("  Total handled:     " + stats.handledNumber + "\n");
         ret.append("  Duplicates found:  " + stats.duplicateNumber + " " + 
         		getPercentage(stats.duplicateNumber,stats.handledNumber) + "\n");
@@ -295,6 +293,9 @@ public class DeDuplicator extends Processor implements InitializingBean {
                 }
             }
         }
+       	ret.append("\n");
+       	ret.append("Index:\n");
+       	ret.append(index.getInfo());
         
         ret.append("\n");
         return ret.toString();
