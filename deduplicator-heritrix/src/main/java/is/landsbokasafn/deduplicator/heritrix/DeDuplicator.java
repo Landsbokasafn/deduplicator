@@ -319,8 +319,7 @@ class Statistics{
      */
     AtomicLong handledNumber = new AtomicLong(0);
     
-    /** Number of URIs that are deemed duplicates and further processing is
-     *  aborted
+    /** Number of URIs that are deemed duplicates
      */
     AtomicLong duplicateNumber = new AtomicLong(0);
     
@@ -329,13 +328,13 @@ class Statistics{
      */
     AtomicLong exactURLDuplicates = new AtomicLong(0);
     
-    /** The number of URIs that turned out to have equivalent URL and content
-     *  digest matches.
+    /** The number of URIs that turned out to have canonical URL and content
+     *  digest matches. Does not include exact matches.
      */
     AtomicLong canonicalURLDuplicates = new AtomicLong(0);
     
-    /** The number of URIs that, while having no exact or equivalent matches,  
-     *  do have exact content digest matches against non-equivalent URIs.
+    /** The number of URIs that, while having no exact or canonical matches,  
+     *  do have exact content digest matches against other URIs.
      */
     AtomicLong digestDuplicates = new AtomicLong(0);
     
