@@ -1,7 +1,9 @@
 DeDuplicator
 ============
 
-Deduplicator addon for Heritrix 3
+[![Build Status](https://travis-ci.org/Landsbokasafn/deduplicator.png?branch=master)](https://travis-ci.org/Landsbokasafn/deduplicator/)
+
+DeDuplicator add-on for Heritrix 3
 
 See further on the [DeDuplicator site](https://landsbokasafn.github.io/DeDuplicator/).
 
