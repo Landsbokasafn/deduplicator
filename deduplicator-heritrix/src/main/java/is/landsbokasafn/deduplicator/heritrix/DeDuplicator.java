@@ -20,34 +20,19 @@ import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_
 import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_PROFILE;
 import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_URI;
 import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.REVISIT_ANNOTATION_MARKER;
-import static is.landsbokasafn.deduplicator.IndexFields.DATE;
-import static is.landsbokasafn.deduplicator.IndexFields.DIGEST;
-import static is.landsbokasafn.deduplicator.IndexFields.ORIGINAL_RECORD_ID;
-import static is.landsbokasafn.deduplicator.IndexFields.URL;
-import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
 
-import java.io.File;
-import java.io.IOException;
+import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.logging.Level;
+import java.util.Locale;
 import java.util.logging.Logger;
 
-import org.apache.lucene.document.Document;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.store.NIOFSDirectory;
 import org.archive.modules.CrawlURI;
 import org.archive.modules.ProcessResult;
 import org.archive.modules.Processor;
 import org.archive.modules.net.ServerCache;
 import org.archive.modules.revisit.IdenticalPayloadDigestRevisit;
 import org.archive.util.ArchiveUtils;
-import org.archive.util.Base32;
 import org.archive.wayback.util.url.AggressiveUrlCanonicalizer;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,41 +54,13 @@ public class DeDuplicator extends Processor implements InitializingBean {
 
     // Spring configurable parameters
     
-    /* Location of Lucene Index to use for lookups */
-    private final static String ATTR_INDEX_LOCATION = "index-location";
-
-    public String getIndexLocation() {
-        return (String) kp.get(ATTR_INDEX_LOCATION);
+    /* Index to use */
+    Index index;
+    public Index getIndex() {
+        return index;
     }
-    public void setIndexLocation(String indexLocation) {
-        kp.put(ATTR_INDEX_LOCATION,indexLocation);
-    }
-
-    /* The matching method in use (by url or content digest) */
-    private final static String ATTR_MATCHING_METHOD = "matching-method";
-    private final static MatchingMethod DEFAULT_MATCHING_METHOD = MatchingMethod.URL; 
-    {
-        setMatchingMethod(DEFAULT_MATCHING_METHOD);
-    }
-    public MatchingMethod getMatchingMethod() {
-        return (MatchingMethod) kp.get(ATTR_MATCHING_METHOD);
-    }
-    public void setMatchingMethod(MatchingMethod matchinMethod) {
-    		kp.put(ATTR_MATCHING_METHOD, matchinMethod);
-    }
-    
-    /* If an exact match is not made, should the processor try 
-     *  to find an equivalent match?  
-     */
-    public final static String ATTR_CANONICAL = "try-canonical";
-    {
-    	setTryCanonical(false);
-    }
-    public boolean getTryCanonical(){
-    	return (Boolean)kp.get(ATTR_CANONICAL);
-    }
-    public void setTryCanonical(boolean tryEquivalent){
-    	kp.put(ATTR_CANONICAL,tryEquivalent);
+    public void setIndex(Index index) {
+        this.index=index;
     }
 
     /* The filter on mime types. This is either a blacklist or whitelist
@@ -161,28 +118,10 @@ public class DeDuplicator extends Processor implements InitializingBean {
 
     
     // Member variables.
-    
-    protected IndexSearcher searcher = null;
-    protected DirectoryReader dReader = null;
-    protected boolean lookupByURL = true;
-    
     protected Statistics stats = null;
     protected HashMap<String, Statistics> perHostStats = null;
 
     public void afterPropertiesSet() throws Exception {
-        // Set up Lucene index
-        String indexLocation = getIndexLocation();
-        try {
-            dReader = DirectoryReader.open(new NIOFSDirectory(new File(indexLocation)));
-            searcher = new IndexSearcher(dReader);
-        } catch (Exception e) {
-        	throw new IllegalArgumentException("Unable to find/open index at " + indexLocation,e);
-        } 
-        
-        // Prepare configurations that can not be altered at runtime
-        MatchingMethod matchingMethod = getMatchingMethod();
-        lookupByURL = matchingMethod == MatchingMethod.URL;
-        
         // Initialize statistics accumulators
         stats = new Statistics();
         if (statsPerHost) {
@@ -254,36 +193,32 @@ public class DeDuplicator extends Processor implements InitializingBean {
             currHostStats.totalAmount += curi.getContentSize();
         }
         
-        Document duplicate = null; 
+        String url = curi.getURI();
+        String canonicalizedURL = canonicalizer.canonicalize(url);
+		String digest = curi.getContentDigestString();
         
-        if(lookupByURL){
-            duplicate = lookupByURL(curi,currHostStats);
-        } else {
-            duplicate = lookupByDigest(curi,currHostStats);
-        }
-
+        Duplicate duplicate = index.lookup(url, canonicalizedURL, digest); 
+        
         if (duplicate != null){
-            // Perform tasks common to when a duplicate is found.
             // Increment statistics counters
             stats.duplicateAmount += curi.getContentSize();
             stats.duplicateNumber++;
+            stats.accountFor(duplicate);
             if(statsPerHost){ 
                 currHostStats.duplicateAmount+=curi.getContentSize();
                 currHostStats.duplicateNumber++;
+                currHostStats.accountFor(duplicate);
             }
 
             // Attach revisit profile to CURI. This will inform downstream processors that we've 
             // marked this as a duplicate/revisit
-            String duplicateTimestamp = duplicate.get(DATE.name());
-            String duplicateURL = duplicate.get(URL.name());
-            
         	IdenticalPayloadDigestRevisit revisitProfile = 
         			new IdenticalPayloadDigestRevisit(curi.getContentDigestString());
         	
-        	revisitProfile.setRefersToTargetURI(duplicateURL);
-       		revisitProfile.setRefersToDate(duplicateTimestamp);
+        	revisitProfile.setRefersToTargetURI(duplicate.getUrl());
+       		revisitProfile.setRefersToDate(duplicate.getDate());
         	
-        	String refersToRecordID = duplicate.get(ORIGINAL_RECORD_ID.name());
+        	String refersToRecordID = duplicate.getWarcRecordId();
         	if (refersToRecordID!=null && !refersToRecordID.isEmpty()) {
         		revisitProfile.setRefersToRecordID(refersToRecordID);
         	}
@@ -302,163 +237,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
         return ProcessResult.PROCEED;
 	}
 
-	/** 
-     * Process a CrawlURI looking up in the index by URL
-     * @param curi The CrawlURI to process
-     * @param currHostStats A statistics object for the current host.
-     *                      If per host statistics tracking is enabled this
-     *                      must be non null and the method will increment
-     *                      appropriate counters on it.
-     * @return The result of the lookup (a Lucene document). If a duplicate is
-     *         not found null is returned.
-     */
-	protected Document lookupByURL(CrawlURI curi, Statistics currHostStats) {
-		// Look the CrawlURI's URL up in the index.
-		try {
-			Query query = queryField(URL.name(), curi.getURI());
-			ScoreDoc[] hits = searcher.search(query, null, 5).scoreDocs;
 
-			Document doc = null;
-			String currentDigest = curi.getContentDigestString();
-			if (hits != null && hits.length > 0) {
-				// Typically there should only be one hit, but we'll allow for
-				// multiple hits.
-				for (int i = 0; i < hits.length; i++) {
-					// Multiple hits on same exact URL should be rare
-					// See if any have matching content digests
-					doc = searcher.doc(hits[i].doc);
-					String oldDigest = doc.get(DIGEST.name());
-
-					if (oldDigest.equalsIgnoreCase(currentDigest)) {
-						stats.exactURLDuplicates++;
-						if (statsPerHost) {
-							currHostStats.exactURLDuplicates++;
-						}
-
-						logger.finest("Found exact match for "
-								+ curi.toString());
-
-						// If we found a hit, no need to look at other hits.
-						return doc;
-					}
-				}
-			}
-			if (getTryCanonical()) {
-				// No exact hits. Let's try lenient matching.
-				String canonicalizedURL = canonicalizer.canonicalize(curi.toString()); 
-				query = queryField(URL.name(), canonicalizedURL);
-				hits = searcher.search(query, null, 5).scoreDocs;
-
-				for (int i = 0; i < hits.length; i++) {
-					doc = searcher.doc(hits[i].doc);
-					String indexDigest = doc.get(DIGEST.name());
-					if (indexDigest.equals(currentDigest)) {
-						// Make note in log
-						String equivURL = doc.get(URL.name());
-						curi.getAnnotations().add(
-								"equivalentURL:\"" + equivURL + "\"");
-						// Increment statistics counters
-						stats.canonicalURLDuplicates++;
-						if (statsPerHost) {
-							currHostStats.canonicalURLDuplicates++;
-						}
-						logger.finest("Found equivalent match for "
-								+ curi.toString() + ". Canonicalized: "
-								+ canonicalizedURL + ". Equivalent to: "
-								+ equivURL);
-
-						// If we found a hit, no need to look at more.
-						return doc;
-					}
-				}
-			}
-		} catch (IOException e) {
-			logger.log(Level.SEVERE, "Error accessing index.", e);
-		}
-		// If we make it here then this is not a duplicate.
-		return null;
-	}
-    
-	/** 
-     * Process a CrawlURI looking up in the index by content digest
-     * @param curi The CrawlURI to process
-     * @param currHostStats A statistics object for the current host.
-     *                      If per host statistics tracking is enabled this
-     *                      must be non null and the method will increment
-     *                      appropriate counters on it.
-     * @return The result of the lookup (a Lucene document). If a duplicate is
-     *         not found null is returned.
-     */
-    protected Document lookupByDigest(CrawlURI curi, Statistics currHostStats) {
-        Document duplicate = null; 
-        String currentDigest = null;
-        Object digest = curi.getContentDigest();
-        if (digest != null) {
-            currentDigest = Base32.encode((byte[])digest);
-        }
-        Query query = queryField(DIGEST.name(), currentDigest);
-        try {
-            ScoreDoc[] hits = searcher.search(query, null, 50).scoreDocs; // TODO: Look at value 50
-            StringBuffer mirrors = new StringBuffer();
-            mirrors.append("mirrors: ");
-            String url = curi.toString();
-            String canonicalizedURL = 
-            	getTryCanonical() ? canonicalizer.canonicalize(url) : null;
-            if(hits != null && hits.length > 0){
-                // Can definitely be more then one
-                // Note: We may find an equivalent match before we find an (existing) exact match. 
-                // TODO: Ensure that an exact match is recorded if it exists.
-                for(int i=0 ; i<hits.length && duplicate==null ; i++){
-                    Document doc = searcher.doc(hits[i].doc);
-                    String indexURL = doc.get(URL.name());
-                    // See if the current hit is an exact match.
-                    if(url.equals(indexURL)){
-                        duplicate = doc;
-                        stats.exactURLDuplicates++;
-                        if(statsPerHost){
-                            currHostStats.exactURLDuplicates++;
-                        }
-                        logger.finest("Found exact match for " + curi.toString());
-                    }
-                    
-                    // If not, then check if it is an equivalent match (if
-                    // equivalent matches are allowed).
-                    if(duplicate == null && getTryCanonical()){
-                        String indexCanonicalizedURL = 
-                            doc.get(URL_CANONICALIZED.name());
-                        if(canonicalizedURL.equals(indexCanonicalizedURL)){
-                            duplicate = doc;
-                            stats.canonicalURLDuplicates++;
-                            if(statsPerHost){
-                                currHostStats.canonicalURLDuplicates++;
-                            }
-                            curi.getAnnotations().add("equivalentURL:\"" + indexURL + "\"");
-                            logger.finest("Found equivalent match for " + 
-                                    curi.toString() + ". Canonicalized: " + 
-                                    canonicalizedURL + ". Equivalent to: " + indexURL);
-                        }
-                    }
-                    
-                    if(duplicate == null){
-                        // Will only be used if no exact (or equivalent) match is found.
-                        mirrors.append(indexURL + " ");
-                    }
-                }
-                if(duplicate == null){
-                	// TODO: Handle this scenario
-                    stats.mirrorNumber++;
-                    if (statsPerHost) {
-                        currHostStats.mirrorNumber++;
-                    }
-                    logger.log(Level.FINEST,"Found mirror URLs for " + 
-                            curi.toString() + ". " + mirrors);
-                }
-            }
-        } catch (IOException e) {
-            logger.log(Level.SEVERE,"Error accessing index.",e);
-        }
-        return duplicate;
-    }
     
 	public String report() {
         StringBuilder ret = new StringBuilder();
@@ -466,8 +245,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
         ret.append(DeDuplicator.class.getCanonicalName());
         ret.append("\n");
         ret.append("  Function:          Set revisit profile on records deemed duplicate by hash comparison\n");
-        ret.append("                     - Lookup by " + 
-        		(lookupByURL?"url":"digest") + " in use\n");
         ret.append("  Total handled:     " + stats.handledNumber + "\n");
         ret.append("  Duplicates found:  " + stats.duplicateNumber + " " + 
         		getPercentage(stats.duplicateNumber,stats.handledNumber) + "\n");
@@ -478,19 +255,14 @@ public class DeDuplicator extends Processor implements InitializingBean {
         		getPercentage(stats.duplicateAmount, stats.totalAmount) + "\n");
         
     	ret.append("  New (no hits):     " + (stats.handledNumber-
-    			(stats.mirrorNumber+stats.exactURLDuplicates+stats.canonicalURLDuplicates)) + "\n");
+    			(stats.digestDuplicates+stats.exactURLDuplicates+stats.canonicalURLDuplicates)) + "\n");
     	ret.append("  Exact hits:        " + stats.exactURLDuplicates + "\n");
     	ret.append("  Canonical hits:    " + stats.canonicalURLDuplicates + "\n");
-        if(lookupByURL==false){
-        	ret.append("  Mirror hits:       " + stats.mirrorNumber + "\n");
-        }
+       	ret.append("  Digest hits:       " + stats.digestDuplicates + "\n");
         
         if(statsPerHost){
             ret.append("  [Host] [total] [duplicates] [bytes] " +
-                    "[bytes discarded] [new] [exact] [equiv]");
-            if(lookupByURL==false){
-                ret.append(" [mirror]");
-            }
+                    "[bytes discarded] [new] [exact] [canon] [digest]");
             ret.append("\n");
             synchronized (perHostStats) {
                 Iterator<String> it = perHostStats.keySet().iterator();
@@ -508,60 +280,32 @@ public class DeDuplicator extends Processor implements InitializingBean {
                     ret.append(curr.duplicateAmount);
                     ret.append(" ");
                     ret.append(curr.handledNumber-
-                            (curr.mirrorNumber+
+                            (curr.digestDuplicates+
                              curr.exactURLDuplicates+
                              curr.canonicalURLDuplicates));
                     ret.append(" ");
                     ret.append(curr.exactURLDuplicates);
                     ret.append(" ");
                     ret.append(curr.canonicalURLDuplicates);
-
-                    if(lookupByURL==false){
-                        ret.append(" ");
-                        ret.append(curr.mirrorNumber);
-                    }    
+                    ret.append(" ");
+                    ret.append(curr.digestDuplicates);
                     ret.append("\n");
                 }
             }
         }
+       	ret.append("\n");
+       	ret.append("Index:\n");
+       	ret.append(index.getInfo());
         
         ret.append("\n");
         return ret.toString();
 	}
 	
 	protected static String getPercentage(double portion, double total){
-		double value = portion / total;
-		value = value*100;
-		String ret = Double.toString(value);
-		int dot = ret.indexOf('.');
-		if(dot+3<ret.length()){
-			ret = ret.substring(0,dot+3);
-		}
-		return ret + "%";
+		NumberFormat percentFormat = NumberFormat.getPercentInstance(Locale.ENGLISH);
+		percentFormat.setMaximumFractionDigits(1);
+		return percentFormat.format(portion/total);
 	}
-
-    /** Run a simple Lucene query for a single term in a single field.
-     *
-     * @param fieldName name of the field to look in.
-     * @param value The value to query for
-     * @returns A Query for the given value in the given field.
-     */
-    protected Query queryField(String fieldName, String value) {
-    	Query query = new TermQuery(new Term(fieldName,value));
-        return query;
-    }
-
-	
-	protected void finalTasks() {
-		try {
-			if (dReader != null) {
-				dReader.close();
-			}
-		} catch (IOException e) {
-			logger.log(Level.SEVERE,"Error closing index",e);
-		}
-	}
-
 
 }
 
@@ -591,7 +335,7 @@ class Statistics{
     /** The number of URIs that, while having no exact or equivalent matches,  
      *  do have exact content digest matches against non-equivalent URIs.
      */
-    long mirrorNumber = 0;
+    long digestDuplicates = 0;
     
     /** The total amount of data represented by the documents who were deemed
      *  duplicates and excluded from further processing.
@@ -601,5 +345,17 @@ class Statistics{
     /** The total amount of data represented by all the documents processed **/
     long totalAmount = 0;
 
+    public void accountFor(Duplicate duplicate) {
+        switch (duplicate.getType()) {
+		case CANONICAL_URL:
+			canonicalURLDuplicates++;
+			break;
+		case DIGEST_ONLY:
+			digestDuplicates++;
+			break;
+		case EXACT_URL:
+			exactURLDuplicates++;
+			break;
+        }
+    }
 }
-
