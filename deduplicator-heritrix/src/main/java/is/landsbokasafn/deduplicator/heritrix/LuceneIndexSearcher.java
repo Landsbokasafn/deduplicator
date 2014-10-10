@@ -8,7 +8,7 @@ import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
 import static is.landsbokasafn.deduplicator.heritrix.DuplicateType.CANONICAL_URL;
 import static is.landsbokasafn.deduplicator.heritrix.DuplicateType.DIGEST_ONLY;
 import static is.landsbokasafn.deduplicator.heritrix.DuplicateType.EXACT_URL;
-import static is.landsbokasafn.deduplicator.heritrix.SearchStrategy.*;
+import static is.landsbokasafn.deduplicator.heritrix.SearchStrategy.URL_CANONICAL_FALLBACK;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,13 +22,13 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.store.NIOFSDirectory;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -160,16 +160,16 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     }
     
     @Override
-	public Duplicate lookup(String url, String canonicalizedURL, String digest) {
+	public Duplicate lookup(String url, String canonicalizedUrl, String digest) {
     	switch (strategy) {
 		case URL_EXACT:
 			return lookupUrlExact(url, digest);
 		case URL_CANONICAL_FALLBACK:
-			return lookupUrlCanonicalFallback(url, canonicalizedURL, digest);
+			return lookupUrlCanonicalFallback(url, canonicalizedUrl, digest);
 		case URL_CANONICAL:
-			return lookupUrlCanonical(canonicalizedURL, digest);
+			return lookupUrlCanonical(canonicalizedUrl, digest);
 		case URL_DIGEST_FALLBACK:
-			break;
+			return lookupUrlDigestFallback(url, canonicalizedUrl, digest);
 		case DIGEST_ANY:
 			return lookupDigestAny(digest);
     	}
