@@ -5,9 +5,6 @@ import static is.landsbokasafn.deduplicator.IndexFields.DIGEST;
 import static is.landsbokasafn.deduplicator.IndexFields.ORIGINAL_RECORD_ID;
 import static is.landsbokasafn.deduplicator.IndexFields.URL;
 import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
-import static is.landsbokasafn.deduplicator.heritrix.DuplicateType.CANONICAL_URL;
-import static is.landsbokasafn.deduplicator.heritrix.DuplicateType.DIGEST_ONLY;
-import static is.landsbokasafn.deduplicator.heritrix.DuplicateType.EXACT_URL;
 import static is.landsbokasafn.deduplicator.heritrix.SearchStrategy.URL_CANONICAL_FALLBACK;
 
 import java.io.File;
@@ -42,6 +39,8 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     protected boolean digestIndexed = false; // Is the Digest field indexed
     protected boolean canoncialAvailable = false; // Is the URL_Canonicalized field present. Indexed if URL is.
 
+    private long recordsInIndex = -1;
+    
     private String indexLocation;
     /**
      * Set the location of the index in the filesystem. Changing this value after the bean has been 
@@ -111,6 +110,12 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
         } catch (NullPointerException e) {
         	canoncialAvailable=false;
         }
+        try {
+			CollectionStatistics urlStats = searcher.collectionStatistics(URL.name());
+			recordsInIndex = urlStats.maxDoc();
+		} catch (IOException e) {
+			logger.log(Level.SEVERE,"Error accessing URL statistics of index " + indexLocation, e);
+		}
     }
     
     /**
@@ -179,7 +184,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     protected Duplicate lookupUrlExact(final String url, final String digest) {
     	Document doc = lookupUrl(url, digest, URL.name());
     	if (doc!=null) {
-    		return wrap(doc,EXACT_URL);
+    		return wrap(doc);
     	}
     	return null;
     }
@@ -187,7 +192,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     protected Duplicate lookupUrlCanonical(String canonicalizedURL, String digest) {
     	Document doc = lookupUrl(canonicalizedURL, digest, URL_CANONICALIZED.name());
     	if (doc!=null) {
-    		return wrap(doc,CANONICAL_URL);
+    		return wrap(doc);
     	}
     	return null;
     }
@@ -200,10 +205,9 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	return dup;
     }
     
-	protected Duplicate wrap(Document doc, DuplicateType type) {
+	protected Duplicate wrap(Document doc) {
 		Duplicate dup = new Duplicate();
 		dup.setUrl(doc.get(URL.name()));
-		dup.setType(type);
 		dup.setDate(doc.get(DATE.name()));
 		dup.setWarcRecordId(doc.get(ORIGINAL_RECORD_ID.name()));
 		return dup;
@@ -229,7 +233,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 					doc = searcher.doc(hits[i].doc);
 					String oldDigest = doc.get(DIGEST.name());
 
-					if (oldDigest.equalsIgnoreCase(digest)) {
+					if (oldDigest.equals(digest)) {
 						// If we found a hit, no need to look at other hits.
 						return doc;
 					}
@@ -256,7 +260,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
             ScoreDoc[] hits = searcher.search(query, null, 1).scoreDocs; 
             if(hits != null && hits.length > 0){
             	// May be multiple hits, but all hits are equal as far as we are concerned.
-                duplicate = wrap(searcher.doc(hits[0].doc), DIGEST_ONLY);
+                duplicate = wrap(searcher.doc(hits[0].doc));
             }
         } catch (IOException e) {
             logger.log(Level.SEVERE,"Error accessing index.",e);
@@ -276,14 +280,8 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	sb.append("\n");
     	sb.append(" Search strategy: " + getSearchStrategy());
     	sb.append("\n");
-		sb.append(" Documents in index: ");
-        try {
-			CollectionStatistics urlStats = searcher.collectionStatistics(URL.name());
-			sb.append(urlStats.maxDoc());
-		} catch (IOException e) {
-			logger.log(Level.SEVERE,"Error accessing URL statistics of index " + indexLocation, e);
-			sb.append("unavailable");
-		}
+		sb.append(" Records in index: ");
+		sb.append(recordsInIndex);
     	sb.append("\n");
     	
     	return sb.toString();

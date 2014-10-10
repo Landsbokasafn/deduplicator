@@ -204,12 +204,11 @@ public class DeDuplicator extends Processor implements InitializingBean {
             // Increment statistics counters
             stats.duplicateAmount.addAndGet(curi.getContentSize());
             stats.duplicateNumber.incrementAndGet();
-            stats.accountFor(duplicate);
             if(statsPerHost){ 
                 currHostStats.duplicateAmount.addAndGet(curi.getContentSize());
                 currHostStats.duplicateNumber.incrementAndGet();
-                currHostStats.accountFor(duplicate);
             }
+            count(duplicate, url, canonicalizedURL, currHostStats);
 
             // Attach revisit profile to CURI. This will inform downstream processors that we've 
             // marked this as a duplicate/revisit
@@ -238,7 +237,24 @@ public class DeDuplicator extends Processor implements InitializingBean {
         return ProcessResult.PROCEED;
 	}
 
-
+	private void count(Duplicate dup, String url, String canonicalUrl, Statistics currHostStats) {
+		if (dup.getUrl().equals(url)) {
+			stats.exactURLDuplicates.incrementAndGet();
+			if (statsPerHost) {
+				currHostStats.exactURLDuplicates.incrementAndGet();
+			}
+		} else if (canonicalizer.canonicalize(dup.getUrl()).equals(canonicalUrl)) {
+			stats.canonicalURLDuplicates.incrementAndGet();
+			if (statsPerHost) {
+				currHostStats.canonicalURLDuplicates.incrementAndGet();
+			}
+		} else {
+			stats.digestDuplicates.incrementAndGet();
+			if (statsPerHost) {
+				currHostStats.digestDuplicates.incrementAndGet();
+			}
+		}
+	}
     
 	public String report() {
         StringBuilder ret = new StringBuilder();
@@ -346,17 +362,4 @@ class Statistics{
     /** The total amount of data represented by all the documents processed **/
     AtomicLong totalAmount = new AtomicLong(0);
 
-    public void accountFor(Duplicate duplicate) {
-        switch (duplicate.getType()) {
-		case CANONICAL_URL:
-			canonicalURLDuplicates.incrementAndGet();
-			break;
-		case DIGEST_ONLY:
-			digestDuplicates.incrementAndGet();
-			break;
-		case EXACT_URL:
-			exactURLDuplicates.incrementAndGet();
-			break;
-        }
-    }
 }

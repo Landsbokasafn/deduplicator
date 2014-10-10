@@ -6,7 +6,6 @@ package is.landsbokasafn.deduplicator.heritrix;
 public class Duplicate {
 	String url;
 	String date; // In w3c-iso8601 form
-	DuplicateType type;
 	String WarcRecordId;
 	
 	public String getUrl() {
@@ -20,12 +19,6 @@ public class Duplicate {
 	}
 	public void setDate(String date) {
 		this.date = date;
-	}
-	public DuplicateType getType() {
-		return type;
-	}
-	public void setType(DuplicateType type) {
-		this.type = type;
 	}
 	public String getWarcRecordId() {
 		return WarcRecordId;
