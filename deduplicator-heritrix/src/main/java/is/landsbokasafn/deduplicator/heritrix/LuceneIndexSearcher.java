@@ -163,20 +163,20 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 	public Duplicate lookup(String url, String canonicalizedURL, String digest) {
     	switch (strategy) {
 		case URL_EXACT:
-			return lookupExactUrl(url, digest);
+			return lookupUrlExact(url, digest);
 		case URL_CANONICAL_FALLBACK:
-			return lookupCanonicalFallback(url, canonicalizedURL, digest);
+			return lookupUrlCanonicalFallback(url, canonicalizedURL, digest);
 		case URL_CANONICAL:
-			return lookupCanonical(canonicalizedURL, digest);
+			return lookupUrlCanonical(canonicalizedURL, digest);
 		case URL_DIGEST_FALLBACK:
 			break;
 		case DIGEST_ANY:
-			return lookupDigest(digest);
+			return lookupDigestAny(digest);
     	}
     	return null;
     }
     
-    protected Duplicate lookupExactUrl(final String url, final String digest) {
+    protected Duplicate lookupUrlExact(final String url, final String digest) {
     	Document doc = lookupUrl(url, digest, URL.name());
     	if (doc!=null) {
     		return wrap(doc,EXACT_URL);
@@ -184,7 +184,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	return null;
     }
     
-    protected Duplicate lookupCanonical(String canonicalizedURL, String digest) {
+    protected Duplicate lookupUrlCanonical(String canonicalizedURL, String digest) {
     	Document doc = lookupUrl(canonicalizedURL, digest, URL_CANONICALIZED.name());
     	if (doc!=null) {
     		return wrap(doc,CANONICAL_URL);
@@ -192,10 +192,10 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	return null;
     }
     
-    protected Duplicate lookupCanonicalFallback(String url, String canonicalizedURL, String digest) {
-    	Duplicate dup = lookupExactUrl(url, digest);
+    protected Duplicate lookupUrlCanonicalFallback(String url, String canonicalizedURL, String digest) {
+    	Duplicate dup = lookupUrlExact(url, digest);
     	if (dup==null) {
-    		dup = lookupCanonical(canonicalizedURL, digest);
+    		dup = lookupUrlCanonical(canonicalizedURL, digest);
     	}
     	return dup;
     }
@@ -242,14 +242,14 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 	}
 	
 	protected Duplicate lookupUrlDigestFallback(String url, String canonicalizedURL, String digest) {
-		Duplicate dup = lookupCanonicalFallback(url, canonicalizedURL, digest);
+		Duplicate dup = lookupUrlCanonicalFallback(url, canonicalizedURL, digest);
 		if (dup==null) {
-			dup = lookupDigest(digest);
+			dup = lookupDigestAny(digest);
 		}
 		return dup;
 	}
 
-    protected Duplicate lookupDigest(final String digest) {
+    protected Duplicate lookupDigestAny(final String digest) {
         Duplicate duplicate = null; 
         Query query = new TermQuery(new Term(DIGEST.name(), digest));
         try {
