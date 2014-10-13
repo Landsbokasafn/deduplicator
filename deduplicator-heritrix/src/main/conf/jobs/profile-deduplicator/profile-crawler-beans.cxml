@@ -25,24 +25,33 @@
 		class="org.springframework.beans.factory.config.PropertyOverrideConfigurer">
 		<property name="properties">
 			<value>
-				# This Properties map is specified in the Java 'property list' text format
-				# http://java.sun.com/javase/6/docs/api/java/util/Properties.html#load%28java.io.Reader%29
+				# This Properties map is specified in the Java 'property list'
+				text format
+				#
+				http://java.sun.com/javase/6/docs/api/java/util/Properties.html#load%28java.io.Reader%29
 
 				metadata.operatorContactUrl=ENTER_AN_URL_WITH_YOUR_CONTACT_INFO_HERE_FOR_WEBMASTERS_AFFECTED_BY_YOUR_CRAWL
 				metadata.jobName=basic
-				metadata.description=Basic crawl starting with useful defaults
+				metadata.description=Basic crawl starting with
+				useful defaults
 
 				# Location of DeDuplicator index
 				deduplicatorIndex.indexLocation=ENTER_THE_LOCATION_OF_YOUR_INDEX_HERE
-				
-				# Search strategy for how to search in the index. I.e. when to consider something a match.
-				# Note that the index must have been built in a manner that supports the chosen strategy.  
+
+				# Search strategy for how to search in the index. I.e. when to
+				consider something a match.
+				# Note that the index must have been
+				built in a manner that supports the chosen strategy.
 				# Allowed values are:
-				#  URL_EXACT  -- Search on URL
-				#  URL_CANONICAL   -- Search on canonical form of URL
-				#  URL_CANONICAL_FALLBACK  -- Search by exact URL and fall back to canonical if needed
-				#  DIGEST_ANY  -- Search by digest
-				#  URL_DIGEST_FALLBACK  -- Search by URL_CANONICAL_FALLBACK and then fallback to DIGEST_ANY
+				# URL_EXACT -- Search on URL
+				# URL_CANONICAL --
+				Search on canonical form of URL
+				# URL_CANONICAL_FALLBACK -- Search by
+				exact URL and fall back to canonical if needed
+				# DIGEST_ANY -- Search
+				by digest
+				# URL_DIGEST_FALLBACK -- Search by URL_CANONICAL_FALLBACK
+				and then fallback to DIGEST_ANY
 				deduplicatorIndex.searchStrategy=URL_EXACT
 
 				##..more?..##
@@ -259,19 +268,34 @@
 	</bean>
 
 
-    <!-- DeDuplicator module defined -->
-    <bean id="deduplicator" class="is.landsbokasafn.deduplicator.heritrix.DeDuplicator">
-        <property name="index">
-            <ref bean="deduplicatorIndex" />
-        </property>
-        <!-- <property name="mimeFilter" value="^text/.*" /> -->
-        <!-- <property name="blacklist" value="true" /> -->
-        <!-- <property name="statsPerHost" value="false" /> -->
-    </bean>
-    <bean id="deduplicatorIndex" class="is.landsbokasafn.deduplicator.heritrix.LuceneIndexSearcher">
-        <property name="indexLocation" value="[see override above]" />
-        <property name="searchStrategy" value="[see override above]" />
-    </bean>
+	<!-- DeDuplicator module defined -->
+	<bean id="deduplicator" class="is.landsbokasafn.deduplicator.heritrix.DeDuplicator">
+		<property name="shouldProcessRule">
+			<bean class="org.archive.modules.deciderules.DecideRuleSequence">
+				<property name="rules">
+					<list>
+						<!-- Blacklist, ban the specified mime/content type pattern -->
+						<!-- First ACCEPT all -->
+						<bean class="org.archive.modules.deciderules.AcceptDecideRule" />
+						<!-- Then REJECT those URLs whose content-type matches the regex -->
+						<bean class="org.archive.modules.deciderules.ContentTypeMatchesRegexDecideRule">
+							<property name="decision" value="REJECT" />
+							<property name="regex" value="^text/.*" />
+						</bean>
+					</list>
+				</property>
+			</bean>
+		</property>
+		<property name="index">
+			<ref bean="deduplicatorIndex" />
+		</property>
+		<!-- <property name="statsPerHost" value="false" /> -->
+	</bean>
+	<bean id="deduplicatorIndex"
+		class="is.landsbokasafn.deduplicator.heritrix.LuceneIndexSearcher">
+		<property name="indexLocation" value="[see override above]" />
+		<property name="searchStrategy" value="[see override above]" />
+	</bean>
 
 
 	<bean id="extractorHttp" class="org.archive.modules.extractor.ExtractorHTTP">
@@ -580,8 +604,9 @@
 		<!-- <property name="progressLogPath" value="progress-statistics.log" /> -->
 		<!-- <property name="uriErrorsLogPath" value="uri-errors.log" /> -->
 		<!-- <property name="runtimeErrorsLogPath" value="runtime-errors.log" /> -->
-		<!-- <property name="nonfatalErrorsLogPath" value="nonfatal-errors.log" /> -->
-        <property name="logExtraInfo" value="true" />
+		<!-- <property name="nonfatalErrorsLogPath" value="nonfatal-errors.log" 
+			/> -->
+		<property name="logExtraInfo" value="true" />
 	</bean>
 
 	<!-- SHEETOVERLAYMANAGER: manager of sheets of contextual overlays Autowired 

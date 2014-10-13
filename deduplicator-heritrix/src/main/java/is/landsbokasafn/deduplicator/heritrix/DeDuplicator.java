@@ -64,35 +64,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
         this.index=index;
     }
 
-    /* The filter on mime types. This is either a blacklist or whitelist
-     *  depending on ATTR_FILTER_MODE.
-     */
-    public final static String ATTR_MIME_FILTER = "mime-filter";
-    public final static String DEFAULT_MIME_FILTER = "^text/.*";
-    {
-    	setMimeFilter(DEFAULT_MIME_FILTER);
-    }
-    public String getMimeFilter(){
-    	return (String)kp.get(ATTR_MIME_FILTER);
-    }
-    public void setMimeFilter(String mimeFilter){
-    	kp.put(ATTR_MIME_FILTER, mimeFilter);
-    }
-
-    /* Is the mime filter a blacklist (do not apply processor to what matches) 
-     *  or whitelist (apply processor only to what matches).
-     */
-    public final static String ATTR_FILTER_MODE = "filter-mode";
-    {
-    	setBlacklist(true);
-    }
-    public boolean getBlacklist(){
-    	return (Boolean)kp.get(ATTR_FILTER_MODE);
-    }
-    public void setBlacklist(boolean blacklist){
-    	kp.put(ATTR_FILTER_MODE, blacklist);
-    }
-    
     /* Should statistics be tracked per host? **/
    	boolean statsPerHost=false;
     public boolean getStatsPerHost(){
@@ -151,12 +122,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
         if(curi.getContentType() == null){
             // No content type means we can not handle it.
             logger.finest("Not handling " + curi.toString() + ", missing content (mime) type");
-            return false;
-        }
-        if(curi.getContentType().matches(getMimeFilter()) == getBlacklist()){
-            // Does not pass the mime filter
-            logger.finest("Not handling " + curi.toString()
-                    + ", excluded by mimefilter (" + curi.getContentType() + ").");
             return false;
         }
         if(curi.isRevisit()){
