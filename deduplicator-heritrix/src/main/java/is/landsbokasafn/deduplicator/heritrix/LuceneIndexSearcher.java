@@ -5,7 +5,6 @@ import static is.landsbokasafn.deduplicator.IndexFields.DIGEST;
 import static is.landsbokasafn.deduplicator.IndexFields.ORIGINAL_RECORD_ID;
 import static is.landsbokasafn.deduplicator.IndexFields.URL;
 import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
-import static is.landsbokasafn.deduplicator.heritrix.SearchStrategy.URL_CANONICAL_FALLBACK;
 
 import java.io.File;
 import java.io.IOException;
@@ -95,8 +94,8 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	// Determine index makeup
         urlIndexed = isFieldIndexed(URL.name());
         digestIndexed = isFieldIndexed(DIGEST.name());
-        if (urlIndexed==false && digestIndexed==false) {
-        	throw new IllegalStateException("Either URL or DIGEST fields must be indexed (or both).");
+        if (digestIndexed==false) {
+        	throw new IllegalStateException("DIGEST fields must be indexed.");
         }
         try {
             boolean canonicalIndexed = isFieldIndexed(URL_CANONICALIZED.name());
@@ -124,30 +123,16 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
      * @throws IllegalStateException if the strategy can not be carried out for the current index
      */
     private void verifyStrategy(SearchStrategy strategy) {
-    	switch (strategy) {
-    	case URL_EXACT :
-    	case URL_CANONICAL :
-    	case URL_CANONICAL_FALLBACK :
-    		// All three require only that the url be indexed
+    	if (strategy==SearchStrategy.URL_EXACT || strategy==SearchStrategy.URL_CANONICAL) {
     		if (!urlIndexed) {
     			throw new IllegalStateException("URL must be indexed for search strategy " + strategy.name());
     		}
-    		break;
-    	case DIGEST_ANY :
-    		if (!digestIndexed) {
-    			throw new IllegalStateException("Digest must be indexed for search strategy " + strategy.name());
-    		}
-    		break;
-    	case URL_DIGEST_FALLBACK :
-    		if (!urlIndexed || !digestIndexed) {
-    			throw new IllegalStateException("URL and DIGEST must be indexed for search strategy " + 
+    	}
+    	if (strategy==SearchStrategy.URL_CANONICAL) {
+    		if (!canoncialAvailable) {
+    			throw new IllegalStateException("Canonical URL must be available for search strategy " + 
     					strategy.name());
     		}
-    		break;
-    	}
-    	if (strategy.equals(URL_CANONICAL_FALLBACK) && !canoncialAvailable){
-    		throw new IllegalStateException(URL_CANONICAL_FALLBACK + 
-    				" search requires that canonical url be in the index.");
     	}
     }
     
@@ -169,40 +154,20 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	switch (strategy) {
 		case URL_EXACT:
 			return lookupUrlExact(url, digest);
-		case URL_CANONICAL_FALLBACK:
-			return lookupUrlCanonicalFallback(url, canonicalizedUrl, digest);
 		case URL_CANONICAL:
 			return lookupUrlCanonical(canonicalizedUrl, digest);
-		case URL_DIGEST_FALLBACK:
-			return lookupUrlDigestFallback(url, canonicalizedUrl, digest);
 		case DIGEST_ANY:
-			return lookupDigestAny(digest);
+			return lookupDigestAny(url, canonicalizedUrl, digest);
     	}
     	return null;
     }
     
     protected Duplicate lookupUrlExact(final String url, final String digest) {
-    	Document doc = lookupUrl(url, digest, URL.name());
-    	if (doc!=null) {
-    		return wrap(doc);
-    	}
-    	return null;
+    	return lookupUrl(url, digest, URL.name());
     }
     
-    protected Duplicate lookupUrlCanonical(String canonicalizedURL, String digest) {
-    	Document doc = lookupUrl(canonicalizedURL, digest, URL_CANONICALIZED.name());
-    	if (doc!=null) {
-    		return wrap(doc);
-    	}
-    	return null;
-    }
-    
-    protected Duplicate lookupUrlCanonicalFallback(String url, String canonicalizedURL, String digest) {
-    	Duplicate dup = lookupUrlExact(url, digest);
-    	if (dup==null) {
-    		dup = lookupUrlCanonical(canonicalizedURL, digest);
-    	}
-    	return dup;
+    protected Duplicate lookupUrlCanonical(String canonicalizedUrl, String digest) {
+    	return lookupUrl(canonicalizedUrl, digest, URL_CANONICALIZED.name());
     }
     
 	protected Duplicate wrap(Document doc) {
@@ -213,51 +178,39 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 		return dup;
 	}
 
-	private Document lookupUrl(final String url, final String digest, final String field) {
-		try {
-			Query query = null;
-			if (digestIndexed) {
-            	BooleanQuery q = new BooleanQuery();
-            	q.add(new TermQuery(new Term(field, url)), Occur.MUST);
-            	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
-				query = q;
-			} else {
-				query = new TermQuery(new Term(field,url));
-			}
+	private Duplicate lookupUrl(final String url, final String digest, final String field) {
+		Query query = null;
+    	BooleanQuery q = new BooleanQuery();
+    	q.add(new TermQuery(new Term(field, url)), Occur.MUST);
+    	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
+		query = q;
 			
-			ScoreDoc[] hits = searcher.search(query, null, 5).scoreDocs;
-
-			Document doc = null;
-			if (hits != null && hits.length > 0) {
-				for (int i = 0; i < hits.length; i++) {
-					doc = searcher.doc(hits[i].doc);
-					String oldDigest = doc.get(DIGEST.name());
-
-					if (oldDigest.equals(digest)) {
-						// If we found a hit, no need to look at other hits.
-						return doc;
-					}
-				}
-			}
+        Duplicate duplicate = null; 
+		try {
+			ScoreDoc[] hits = searcher.search(query, null, 1).scoreDocs;
+            if(hits != null && hits.length > 0){
+            	// May be multiple hits, but all hits are equal as far as we are concerned.
+                duplicate = wrap(searcher.doc(hits[0].doc));
+            }
 		} catch (IOException e) {
 			logger.log(Level.SEVERE, "Error accessing index.", e);
 		}
-		return null; // Didn't find a match
+		return duplicate; // Didn't find a match
 	}
 	
-	protected Duplicate lookupUrlDigestFallback(String url, String canonicalizedURL, String digest) {
-		Duplicate dup = lookupUrlCanonicalFallback(url, canonicalizedURL, digest);
-		if (dup==null) {
-			dup = lookupDigestAny(digest);
-		}
-		return dup;
-	}
-
-    protected Duplicate lookupDigestAny(final String digest) {
+    protected Duplicate lookupDigestAny(final String url, final String canonicalizedUrl, final String digest) {
+    	BooleanQuery q = new BooleanQuery();
+    	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
+    	if (urlIndexed) {
+	    	if (canoncialAvailable) {
+	    		q.add(new TermQuery(new Term(URL_CANONICALIZED.name(), canonicalizedUrl)), Occur.SHOULD);
+	    	}
+    		q.add(new TermQuery(new Term(URL.name(), url)), Occur.SHOULD);
+    	}
+		
         Duplicate duplicate = null; 
-        Query query = new TermQuery(new Term(DIGEST.name(), digest));
         try {
-            ScoreDoc[] hits = searcher.search(query, null, 1).scoreDocs; 
+            ScoreDoc[] hits = searcher.search(q, null, 1).scoreDocs; 
             if(hits != null && hits.length > 0){
             	// May be multiple hits, but all hits are equal as far as we are concerned.
                 duplicate = wrap(searcher.doc(hits[0].doc));
