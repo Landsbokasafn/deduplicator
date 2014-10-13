@@ -42,7 +42,7 @@
 				# URL_EXACT -- Search on URL
 				# URL_CANONICAL -- Search on canonical form of URL
 				# DIGEST_ANY -- Search by digest
-				deduplicatorIndex.searchStrategy=URL_EXACT
+				deduplicatorIndex.searchStrategy=DIGEST_ANY
 
 				##..more?..##
 			</value>
