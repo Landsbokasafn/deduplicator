@@ -51,25 +51,15 @@ public class IndexBuilder {
 	
 	public static final String WARC_DATE_FORMAT="yyyy-MM-dd'T'HH:mm:ss'Z'";
 	
-    // Indexing modes (by url, by digest or both)
-    /** Index URL enabling lookups by URL. If normalized URLs are included
-     *  in the index they will also be indexed and searchable. **/
-    public static final String MODE_URL = "URL";
-    /** Index digest enabling lookups by payload digest **/
-    public static final String MODE_DIGEST = "DIGEST";
-    /** Both URL and digest are indexed **/
-    public static final String MODE_BOTH = "BOTH";
-
     /** The index being manipulated **/
     IndexWriter index;
     
     private static final AggressiveUrlCanonicalizer canonicalizer = new AggressiveUrlCanonicalizer();
     
     // The options with default settings
-    boolean etag = false;
-    boolean equivalent = false;
+    boolean includeEtag = false;
+    boolean includeCanonicalizedURL = false;
     boolean indexURL = true;
-    boolean indexDigest = true;
 
     /**
      * Each instance of this class wraps one Lucene index for writing 
@@ -90,20 +80,15 @@ public class IndexBuilder {
      */
     public IndexBuilder(
             String indexLocation,
-            String indexingMode,
+            boolean indexURL,
             boolean includeCanonicalizedURL,
             boolean includeEtag,
             boolean addToExistingIndex) throws IOException {
         
-        this.etag = includeEtag;
-        this.equivalent = includeCanonicalizedURL;
+    	this.indexURL = indexURL;
+        this.includeEtag = includeEtag;
+        this.includeCanonicalizedURL = includeCanonicalizedURL;
         
-        if(indexingMode.equals(MODE_URL)){
-            indexDigest = false;
-        } else if(indexingMode.equals(MODE_DIGEST)){
-            indexURL = false;
-        }
-
         IndexWriterConfig indexWriterConfig = 
         		new IndexWriterConfig(LUCENE_VER, new WhitespaceAnalyzer(LUCENE_VER));
         if (addToExistingIndex) {
@@ -204,7 +189,7 @@ public class IndexBuilder {
                     URL.name(),
                     url,
                     (indexURL ? ftIndexed : ftNotIndexed)));
-            if(equivalent){
+            if(includeCanonicalizedURL){
                 doc.add(new Field(
                         URL_CANONICALIZED.name(),
                         canonicalizer.canonicalize(item.getURL()),
@@ -215,7 +200,7 @@ public class IndexBuilder {
             doc.add(new Field(
                     DIGEST.name(),
                     item.getContentDigest(),
-                    (indexDigest ? ftIndexed : ftNotIndexed)));
+                    ftIndexed));
             
             // add timestamp
             doc.add(new Field(
@@ -224,25 +209,21 @@ public class IndexBuilder {
                     ftNotIndexed));
 
             // Include etag?
-            if(etag && item.getEtag()!=null){
+            if(includeEtag && item.getEtag()!=null){
                 doc.add(new Field(
                         ETAG.name(),
                         item.getEtag(),
                         ftNotIndexed));
             }
-            if (indexDigest && indexURL) {
+            if (indexURL) {
             	// Delete any URL+Digest matches from index first
             	BooleanQuery q = new BooleanQuery();
             	q.add(new TermQuery(new Term(URL.name(), url)), Occur.MUST);
             	q.add(new TermQuery(new Term(DIGEST.name(), item.getContentDigest())), Occur.MUST);
             	index.deleteDocuments(q);
             	index.addDocument(doc);
-            } else if (indexDigest) {
-                index.updateDocument(new Term(DIGEST.name()), doc);
-            } else if (indexURL) {
-                index.updateDocument(new Term(URL.name()), doc);
             } else {
-            	throw new IllegalStateException("Nothing to index");
+                index.updateDocument(new Term(DIGEST.name()), doc);
             }
             
         }

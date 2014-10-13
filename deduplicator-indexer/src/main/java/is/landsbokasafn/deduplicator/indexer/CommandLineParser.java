@@ -67,16 +67,15 @@ public class CommandLineParser {
         this.options.addOption(new Option("h","help", false,
                 "Prints this message and exits."));
         
-        Option opt = new Option("o","mode", true,
-                "Index by URL, DIGEST or BOTH. Default: BOTH.");
-        opt.setArgName("type");
+        Option opt = new Option("u","no-url-index", false,
+                "Do not index the URLs. Index will only be searchable by digest.");
         this.options.addOption(opt);
         
-        this.options.addOption(new Option("s","canonicalize", false,
-                "Add a canonicalized version of the URL to the index."));
+        this.options.addOption(new Option("s","no-canonicalized", false,
+                "Do not add a canonicalized version of the URL to the index."));
         
         this.options.addOption(new Option("e","etag", false,
-        "Include etags in the index (if available in the source)."));
+        		"Include etags in the index (if available in the source)."));
 
         opt = new Option("m","mime", true,
                 "A filter on what mime types are added into the index " +
