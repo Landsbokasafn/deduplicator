@@ -25,10 +25,8 @@
 		class="org.springframework.beans.factory.config.PropertyOverrideConfigurer">
 		<property name="properties">
 			<value>
-				# This Properties map is specified in the Java 'property list'
-				text format
-				#
-				http://java.sun.com/javase/6/docs/api/java/util/Properties.html#load%28java.io.Reader%29
+				# This Properties map is specified in the Java 'property list' text format
+				# http://java.sun.com/javase/6/docs/api/java/util/Properties.html#load%28java.io.Reader%29
 
 				metadata.operatorContactUrl=ENTER_AN_URL_WITH_YOUR_CONTACT_INFO_HERE_FOR_WEBMASTERS_AFFECTED_BY_YOUR_CRAWL
 				metadata.jobName=basic
@@ -38,20 +36,12 @@
 				# Location of DeDuplicator index
 				deduplicatorIndex.indexLocation=ENTER_THE_LOCATION_OF_YOUR_INDEX_HERE
 
-				# Search strategy for how to search in the index. I.e. when to
-				consider something a match.
-				# Note that the index must have been
-				built in a manner that supports the chosen strategy.
+				# Search strategy for how to search in the index. I.e. when to consider something a match.
+				# Note that the index must have been built in a manner that supports the chosen strategy.
 				# Allowed values are:
 				# URL_EXACT -- Search on URL
-				# URL_CANONICAL --
-				Search on canonical form of URL
-				# URL_CANONICAL_FALLBACK -- Search by
-				exact URL and fall back to canonical if needed
-				# DIGEST_ANY -- Search
-				by digest
-				# URL_DIGEST_FALLBACK -- Search by URL_CANONICAL_FALLBACK
-				and then fallback to DIGEST_ANY
+				# URL_CANONICAL -- Search on canonical form of URL
+				# DIGEST_ANY -- Search by digest
 				deduplicatorIndex.searchStrategy=URL_EXACT
 
 				##..more?..##
