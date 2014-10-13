@@ -66,8 +66,7 @@ public class IndexBuilder {
      * deduplication information to it.
      * 
      * @param indexLocation The location of the index (path).
-     * @param indexingMode Index {@link #MODE_URL}, {@link #MODE_DIGEST} or 
-     *                     {@link #MODE_BOTH}.
+     * @param indexURL Index the URL field in the index.
      * @param includeCanonicalizedURL Should a normalized version of the URL be 
      *                             added to the index. 
      *                             See {@link #stripURL(String)}.

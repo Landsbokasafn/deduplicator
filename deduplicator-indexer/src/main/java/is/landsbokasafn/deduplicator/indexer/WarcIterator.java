@@ -41,8 +41,8 @@ public class WarcIterator implements CrawlDataIterator {
     /**
      * Convenience constructor. Equivalent to using no-arg constructor and than invoking initialize with the 
      * same parameter.
-     * @param source The WARC file to iterate over
-     * @throws IOException
+     * @param source The folder containing WARC files to iterate over
+     * @throws IOException If an error occurs reading the source
      */
     public WarcIterator(String source) throws IOException {
     	initialize(source);

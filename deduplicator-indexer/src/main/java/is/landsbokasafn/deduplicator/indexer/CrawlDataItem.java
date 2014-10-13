@@ -80,7 +80,7 @@ public class CrawlDataItem {
     
     /**
      * Returns a timestamp for when the URL was fetched in the format consistent with WARC-Date,  w3c-iso8601
-     * <p><pre>YYYY-MM-DDThh:mm:ssZ</pre></p>
+     * <pre>YYYY-MM-DDThh:mm:ssZ</pre>
      * @return the time of the URLs fetching
      */
     public String getTimestamp(){
@@ -148,7 +148,7 @@ public class CrawlDataItem {
 
 	/**
 	 * Get the HTTP (or Heritrix if 0 or smaller) status code associated with the item
-	 * @return
+	 * @return the status code
 	 */
 	public int getStatusCode() {
 		return statusCode;

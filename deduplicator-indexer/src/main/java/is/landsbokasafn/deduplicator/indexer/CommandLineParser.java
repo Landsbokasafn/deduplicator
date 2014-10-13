@@ -116,7 +116,7 @@ public class CommandLineParser {
     /**
      * Print usage then exit.
      *
-     * @param exitCode
+     * @param exitCode The exit code to return 
      */
     public void usage(int exitCode) {
         usage(null, exitCode);

@@ -116,6 +116,7 @@ public class CrawlLogIterator implements CrawlDataIterator {
     /**
      * Ready the next item.  When the method returns, either next is non-null
      * or there are no more items in the crawl log.
+     * @throws IOException If unable to read the next item.
      */
     protected void prepareNext() throws IOException{
     	if (next!=null) {
