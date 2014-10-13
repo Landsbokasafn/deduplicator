@@ -109,19 +109,9 @@ public class DeDuplicator extends Processor implements InitializingBean {
             logger.finest("Not handling " + curi.toString() + ", did not succeed.");
             return false;
         }
-        if (curi.isPrerequisite()) {
-            // Prerequisites are exempt from checking. TODO: Is this still valid?
-            logger.finest("Not handling " + curi.toString() + ", prerequisite.");
-            return false;
-        }
-        if (curi.toString().startsWith("http")==false) {
+        if (curi.isHttpTransaction()==false) {
             // Non-http documents are not handled at present
             logger.finest("Not handling " + curi.toString() + ", non-http.");
-            return false;
-        }
-        if(curi.getContentType() == null){
-            // No content type means we can not handle it.
-            logger.finest("Not handling " + curi.toString() + ", missing content (mime) type");
             return false;
         }
         if(curi.isRevisit()){
