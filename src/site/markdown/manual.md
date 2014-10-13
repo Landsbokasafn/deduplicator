@@ -83,7 +83,8 @@ Options:
  -s,--no-canonicalized      Do not add a canonicalized version of the URL to the
                             index.
  -u,--no-url-index          Do not index the URLs. Index will only be searchable
-                            by digest.
+                            by digest. Choosing this also sets
+                            --no-canonicalized.
  -v,--verbose               Make the program print progress info to standard
                             out.
  -w,--whitelist             Make the --mime filter a whitelist instead of
@@ -134,7 +135,7 @@ The digest must be indexed and the original capture time will always be included
 
 The URL must be included and is indexed by default, but you can opt to not index it via `--no-url-index`. This limits your search strategies to `DIGEST_ANY`.
 
-If the URL is indexed, a canoncalized form of the URL can also be included (uses AggressiveUrlCanonicalizer from OpenWayback). This enables certain search strategies. This can be suppressed via `--no-canonicalized`.
+If the URL is indexed, a canonicalized form of the URL can also be included (uses AggressiveUrlCanonicalizer from OpenWayback). This enables certain search strategies. This can be suppressed via `--no-canonicalized`.
 
 Lastly, you can use the `--add` option if you wish to add to an already existing index. Care should be taken not to mix indexes with different options regarding `--no-url-index` and `--no-canonicalized`.
 
