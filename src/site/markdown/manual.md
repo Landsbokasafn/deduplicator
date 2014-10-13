@@ -40,7 +40,7 @@ You'll also find a `heritrix` folder that we'll get to later.
 The DeDuplicator relies on a pre-built Lucene index. This is consulted during crawl time to determine if a resource
 can be filtered out as a duplicate/revisit.
 
-At minimum the index must contain:
+Required fields:
 
  * The content digest - This must always be indexed (i.e. searchable)
  * The original URL
@@ -54,6 +54,13 @@ URL of the original capture. As long as the digests are the same, that is enough
 
 It is also possible to have the URL field indexed. If this is done, it is possible to either require that the URL 
 match, or simply prefer URL matches when possible. This will be discussed more later in search strategies.
+
+Optional fields are:
+
+ * Canonical form of the URL - Only available if URL is indexed.
+ * ETag - Not currently used. Intended for future `server-not-modified` deduplication
+ * Original Record ID - The original record]s `WARC-Refers-To` header value. Used for the `WARC-Refers-To` field in a revisit record when available.
+
 
 ### Run the indexer
 
