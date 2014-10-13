@@ -274,7 +274,7 @@
 			<bean class="org.archive.modules.deciderules.DecideRuleSequence">
 				<property name="rules">
 					<list>
-						<!-- Blacklist, ban the specified mime/content type pattern -->
+						<!-- Blacklist, do not deduplicate on the specified mime/content type pattern -->
 						<!-- First ACCEPT all -->
 						<bean class="org.archive.modules.deciderules.AcceptDecideRule" />
 						<!-- Then REJECT those URLs whose content-type matches the regex -->
