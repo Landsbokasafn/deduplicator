@@ -68,7 +68,8 @@ public class CommandLineParser {
                 "Prints this message and exits."));
         
         Option opt = new Option("u","no-url-index", false,
-                "Do not index the URLs. Index will only be searchable by digest.");
+                "Do not index the URLs. Index will only be searchable by digest. " + 
+        		"Choosing this also sets --no-canonicalized.");
         this.options.addOption(opt);
         
         this.options.addOption(new Option("s","no-canonicalized", false,
@@ -116,7 +117,7 @@ public class CommandLineParser {
     /**
      * Print usage then exit.
      *
-     * @param exitCode
+     * @param exitCode The exit code to return 
      */
     public void usage(int exitCode) {
         usage(null, exitCode);

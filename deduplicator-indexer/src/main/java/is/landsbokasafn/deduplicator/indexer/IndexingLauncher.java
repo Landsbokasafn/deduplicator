@@ -21,6 +21,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.logging.Logger;
 
 import org.apache.commons.cli.Option;
 import org.apache.log4j.PropertyConfigurator;
@@ -116,6 +117,10 @@ public class IndexingLauncher {
             case 's' : canonical = false; break;
             case 'v' : verbose = true; break;
             }
+        }
+        
+        if (!indexURL && canonical) {
+        	canonical=false;
         }
 
         List<String> cargs = clp.getCommandLineArguments(); 

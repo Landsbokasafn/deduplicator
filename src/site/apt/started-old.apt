@@ -1,5 +1,9 @@
-Getting Started
+Getting Started (pre 3.1.0)
 ~~~~~~~~~~~~~~~
+
+ The following directions are applicable for DeDuplicator versions 3.0.0 and earlier. Using Heritrix 3.2.0 or earlier.
+
+ It is recommended that you use the more recent version as it fully supports the IIPC recommended form of WARC revisit records.
 
 * Building an index
 ~~~~~~~~~~~~~~~~~~~
