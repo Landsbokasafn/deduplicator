@@ -32,7 +32,7 @@ import org.archive.util.DateUtils;
  */
 public class IndexingLauncher {
 	
-	private static final String MODE_CONF_KEY = "deduplicator.mode";
+	private static final String INDEX_URL_KEY = "deduplicator.indexurl";
 	private static final String CANONICAL_CONF_KEY = "deduplicator.canonicalurl";
 	private static final String ETAG_CONF_KEY = "deduplicator.etag";
 	private static final String MIME_CONF_KEY = "deduplicator.mime";
@@ -93,8 +93,8 @@ public class IndexingLauncher {
         // Set default values for all settings
     	boolean verbose = readBooleanConfig(VERBOSE_CONF_KEY, true);
         boolean etag = readBooleanConfig(ETAG_CONF_KEY, false);
-        boolean canonical = readBooleanConfig(CANONICAL_CONF_KEY, false);
-        String indexMode = readStringConfig(MODE_CONF_KEY, IndexBuilder.MODE_BOTH);
+        boolean canonical = readBooleanConfig(CANONICAL_CONF_KEY, true);
+        boolean indexURL = readBooleanConfig(INDEX_URL_KEY, true);
         boolean addToIndex = readBooleanConfig(ADD_TO_INDEX_CONF_KEY, false);
         String mimefilter = readStringConfig(MIME_CONF_KEY, "^text/.*");
         boolean whitelist = readBooleanConfig(WHITELIST_CONF_KEY, false);
@@ -112,8 +112,8 @@ public class IndexingLauncher {
             case 'h' : clp.usage(0); break;
             case 'i' : iteratorClassName = opt.getValue(); break;
             case 'm' : mimefilter = opt.getValue(); break;
-            case 'o' : indexMode = opt.getValue(); break;
-            case 's' : canonical = true; break;
+            case 'u' : indexURL = false; break;
+            case 's' : canonical = false; break;
             case 'v' : verbose = true; break;
             }
         }
@@ -132,7 +132,7 @@ public class IndexingLauncher {
 
         // Print initial stuff
         System.out.println("Indexing: " + source);
-        System.out.println(" - Mode: " + indexMode);
+        System.out.println(" - Index URL: " + indexURL);
         System.out.println(" - Mime filter: " + mimefilter + 
                 " (" + (whitelist?"whitelist":"blacklist")+")");
         System.out.println(" - Includes" + 
@@ -154,7 +154,7 @@ public class IndexingLauncher {
         long start = System.currentTimeMillis();
         IndexBuilder di = new IndexBuilder(
         		target,
-        		indexMode,
+        		indexURL,
                 canonical, 
                 etag,
                 addToIndex);

@@ -5,10 +5,6 @@ import static is.landsbokasafn.deduplicator.IndexFields.DIGEST;
 import static is.landsbokasafn.deduplicator.IndexFields.ORIGINAL_RECORD_ID;
 import static is.landsbokasafn.deduplicator.IndexFields.URL;
 import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
-import static is.landsbokasafn.deduplicator.heritrix.DuplicateType.CANONICAL_URL;
-import static is.landsbokasafn.deduplicator.heritrix.DuplicateType.DIGEST_ONLY;
-import static is.landsbokasafn.deduplicator.heritrix.DuplicateType.EXACT_URL;
-import static is.landsbokasafn.deduplicator.heritrix.SearchStrategy.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,13 +18,13 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.store.NIOFSDirectory;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -42,6 +38,8 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     protected boolean digestIndexed = false; // Is the Digest field indexed
     protected boolean canoncialAvailable = false; // Is the URL_Canonicalized field present. Indexed if URL is.
 
+    private long recordsInIndex = -1;
+    
     private String indexLocation;
     /**
      * Set the location of the index in the filesystem. Changing this value after the bean has been 
@@ -96,8 +94,8 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	// Determine index makeup
         urlIndexed = isFieldIndexed(URL.name());
         digestIndexed = isFieldIndexed(DIGEST.name());
-        if (urlIndexed==false && digestIndexed==false) {
-        	throw new IllegalStateException("Either URL or DIGEST fields must be indexed (or both).");
+        if (digestIndexed==false) {
+        	throw new IllegalStateException("DIGEST fields must be indexed.");
         }
         try {
             boolean canonicalIndexed = isFieldIndexed(URL_CANONICALIZED.name());
@@ -111,6 +109,12 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
         } catch (NullPointerException e) {
         	canoncialAvailable=false;
         }
+        try {
+			CollectionStatistics urlStats = searcher.collectionStatistics(URL.name());
+			recordsInIndex = urlStats.maxDoc();
+		} catch (IOException e) {
+			logger.log(Level.SEVERE,"Error accessing URL statistics of index " + indexLocation, e);
+		}
     }
     
     /**
@@ -119,30 +123,16 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
      * @throws IllegalStateException if the strategy can not be carried out for the current index
      */
     private void verifyStrategy(SearchStrategy strategy) {
-    	switch (strategy) {
-    	case URL_EXACT :
-    	case URL_CANONICAL :
-    	case URL_CANONICAL_FALLBACK :
-    		// All three require only that the url be indexed
+    	if (strategy==SearchStrategy.URL_EXACT || strategy==SearchStrategy.URL_CANONICAL) {
     		if (!urlIndexed) {
     			throw new IllegalStateException("URL must be indexed for search strategy " + strategy.name());
     		}
-    		break;
-    	case DIGEST_ANY :
-    		if (!digestIndexed) {
-    			throw new IllegalStateException("Digest must be indexed for search strategy " + strategy.name());
-    		}
-    		break;
-    	case URL_DIGEST_FALLBACK :
-    		if (!urlIndexed || !digestIndexed) {
-    			throw new IllegalStateException("URL and DIGEST must be indexed for search strategy " + 
+    	}
+    	if (strategy==SearchStrategy.URL_CANONICAL) {
+    		if (!canoncialAvailable) {
+    			throw new IllegalStateException("Canonical URL must be available for search strategy " + 
     					strategy.name());
     		}
-    		break;
-    	}
-    	if (strategy.equals(URL_CANONICAL_FALLBACK) && !canoncialAvailable){
-    		throw new IllegalStateException(URL_CANONICAL_FALLBACK + 
-    				" search requires that canonical url be in the index.");
     	}
     }
     
@@ -160,103 +150,70 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     }
     
     @Override
-	public Duplicate lookup(String url, String canonicalizedURL, String digest) {
+	public Duplicate lookup(String url, String canonicalizedUrl, String digest) {
     	switch (strategy) {
 		case URL_EXACT:
-			return lookupExactUrl(url, digest);
-		case URL_CANONICAL_FALLBACK:
-			return lookupCanonicalFallback(url, canonicalizedURL, digest);
+			return lookupUrlExact(url, digest);
 		case URL_CANONICAL:
-			return lookupCanonical(canonicalizedURL, digest);
-		case URL_DIGEST_FALLBACK:
-			break;
+			return lookupUrlCanonical(canonicalizedUrl, digest);
 		case DIGEST_ANY:
-			return lookupDigest(digest);
+			return lookupDigestAny(url, canonicalizedUrl, digest);
     	}
     	return null;
     }
     
-    protected Duplicate lookupExactUrl(final String url, final String digest) {
-    	Document doc = lookupUrl(url, digest, URL.name());
-    	if (doc!=null) {
-    		return wrap(doc,EXACT_URL);
-    	}
-    	return null;
+    protected Duplicate lookupUrlExact(final String url, final String digest) {
+    	return lookupUrl(url, digest, URL.name());
     }
     
-    protected Duplicate lookupCanonical(String canonicalizedURL, String digest) {
-    	Document doc = lookupUrl(canonicalizedURL, digest, URL_CANONICALIZED.name());
-    	if (doc!=null) {
-    		return wrap(doc,CANONICAL_URL);
-    	}
-    	return null;
+    protected Duplicate lookupUrlCanonical(String canonicalizedUrl, String digest) {
+    	return lookupUrl(canonicalizedUrl, digest, URL_CANONICALIZED.name());
     }
     
-    protected Duplicate lookupCanonicalFallback(String url, String canonicalizedURL, String digest) {
-    	Duplicate dup = lookupExactUrl(url, digest);
-    	if (dup==null) {
-    		dup = lookupCanonical(canonicalizedURL, digest);
-    	}
-    	return dup;
-    }
-    
-	protected Duplicate wrap(Document doc, DuplicateType type) {
+	protected Duplicate wrap(Document doc) {
 		Duplicate dup = new Duplicate();
 		dup.setUrl(doc.get(URL.name()));
-		dup.setType(type);
 		dup.setDate(doc.get(DATE.name()));
 		dup.setWarcRecordId(doc.get(ORIGINAL_RECORD_ID.name()));
 		return dup;
 	}
 
-	private Document lookupUrl(final String url, final String digest, final String field) {
-		try {
-			Query query = null;
-			if (digestIndexed) {
-            	BooleanQuery q = new BooleanQuery();
-            	q.add(new TermQuery(new Term(field, url)), Occur.MUST);
-            	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
-				query = q;
-			} else {
-				query = new TermQuery(new Term(field,url));
-			}
+	private Duplicate lookupUrl(final String url, final String digest, final String field) {
+		Query query = null;
+    	BooleanQuery q = new BooleanQuery();
+    	q.add(new TermQuery(new Term(field, url)), Occur.MUST);
+    	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
+		query = q;
 			
-			ScoreDoc[] hits = searcher.search(query, null, 5).scoreDocs;
-
-			Document doc = null;
-			if (hits != null && hits.length > 0) {
-				for (int i = 0; i < hits.length; i++) {
-					doc = searcher.doc(hits[i].doc);
-					String oldDigest = doc.get(DIGEST.name());
-
-					if (oldDigest.equalsIgnoreCase(digest)) {
-						// If we found a hit, no need to look at other hits.
-						return doc;
-					}
-				}
-			}
+        Duplicate duplicate = null; 
+		try {
+			ScoreDoc[] hits = searcher.search(query, null, 1).scoreDocs;
+            if(hits != null && hits.length > 0){
+            	// May be multiple hits, but all hits are equal as far as we are concerned.
+                duplicate = wrap(searcher.doc(hits[0].doc));
+            }
 		} catch (IOException e) {
 			logger.log(Level.SEVERE, "Error accessing index.", e);
 		}
-		return null; // Didn't find a match
+		return duplicate; // Didn't find a match
 	}
 	
-	protected Duplicate lookupUrlDigestFallback(String url, String canonicalizedURL, String digest) {
-		Duplicate dup = lookupCanonicalFallback(url, canonicalizedURL, digest);
-		if (dup==null) {
-			dup = lookupDigest(digest);
-		}
-		return dup;
-	}
-
-    protected Duplicate lookupDigest(final String digest) {
+    protected Duplicate lookupDigestAny(final String url, final String canonicalizedUrl, final String digest) {
+    	BooleanQuery q = new BooleanQuery();
+    	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
+    	if (urlIndexed) {
+	    	if (canoncialAvailable) {
+	    		q.add(new TermQuery(new Term(URL_CANONICALIZED.name(), canonicalizedUrl)), Occur.SHOULD);
+	    	}
+    		q.add(new TermQuery(new Term(URL.name(), url)), Occur.SHOULD);
+    	}
+		
         Duplicate duplicate = null; 
-        Query query = new TermQuery(new Term(DIGEST.name(), digest));
         try {
-            ScoreDoc[] hits = searcher.search(query, null, 1).scoreDocs; 
+            ScoreDoc[] hits = searcher.search(q, null, 1).scoreDocs; 
             if(hits != null && hits.length > 0){
             	// May be multiple hits, but all hits are equal as far as we are concerned.
-                duplicate = wrap(searcher.doc(hits[0].doc), DIGEST_ONLY);
+                duplicate = wrap(searcher.doc(hits[0].doc));
             }
         } catch (IOException e) {
             logger.log(Level.SEVERE,"Error accessing index.",e);
@@ -276,14 +233,8 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	sb.append("\n");
     	sb.append(" Search strategy: " + getSearchStrategy());
     	sb.append("\n");
-		sb.append(" Documents in index: ");
-        try {
-			CollectionStatistics urlStats = searcher.collectionStatistics(URL.name());
-			sb.append(urlStats.maxDoc());
-		} catch (IOException e) {
-			logger.log(Level.SEVERE,"Error accessing URL statistics of index " + indexLocation, e);
-			sb.append("unavailable");
-		}
+		sb.append(" Records in index: ");
+		sb.append(recordsInIndex);
     	sb.append("\n");
     	
     	return sb.toString();

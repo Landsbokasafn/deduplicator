@@ -25,6 +25,7 @@ import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
 import org.archive.modules.CrawlURI;
@@ -63,35 +64,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
         this.index=index;
     }
 
-    /* The filter on mime types. This is either a blacklist or whitelist
-     *  depending on ATTR_FILTER_MODE.
-     */
-    public final static String ATTR_MIME_FILTER = "mime-filter";
-    public final static String DEFAULT_MIME_FILTER = "^text/.*";
-    {
-    	setMimeFilter(DEFAULT_MIME_FILTER);
-    }
-    public String getMimeFilter(){
-    	return (String)kp.get(ATTR_MIME_FILTER);
-    }
-    public void setMimeFilter(String mimeFilter){
-    	kp.put(ATTR_MIME_FILTER, mimeFilter);
-    }
-
-    /* Is the mime filter a blacklist (do not apply processor to what matches) 
-     *  or whitelist (apply processor only to what matches).
-     */
-    public final static String ATTR_FILTER_MODE = "filter-mode";
-    {
-    	setBlacklist(true);
-    }
-    public boolean getBlacklist(){
-    	return (Boolean)kp.get(ATTR_FILTER_MODE);
-    }
-    public void setBlacklist(boolean blacklist){
-    	kp.put(ATTR_FILTER_MODE, blacklist);
-    }
-    
     /* Should statistics be tracked per host? **/
    	boolean statsPerHost=false;
     public boolean getStatsPerHost(){
@@ -137,25 +109,9 @@ public class DeDuplicator extends Processor implements InitializingBean {
             logger.finest("Not handling " + curi.toString() + ", did not succeed.");
             return false;
         }
-        if (curi.isPrerequisite()) {
-            // Prerequisites are exempt from checking. TODO: Is this still valid?
-            logger.finest("Not handling " + curi.toString() + ", prerequisite.");
-            return false;
-        }
-        if (curi.toString().startsWith("http")==false) {
+        if (curi.isHttpTransaction()==false) {
             // Non-http documents are not handled at present
             logger.finest("Not handling " + curi.toString() + ", non-http.");
-            return false;
-        }
-        if(curi.getContentType() == null){
-            // No content type means we can not handle it.
-            logger.finest("Not handling " + curi.toString() + ", missing content (mime) type");
-            return false;
-        }
-        if(curi.getContentType().matches(getMimeFilter()) == getBlacklist()){
-            // Does not pass the mime filter
-            logger.finest("Not handling " + curi.toString()
-                    + ", excluded by mimefilter (" + curi.getContentType() + ").");
             return false;
         }
         if(curi.isRevisit()){
@@ -177,8 +133,8 @@ public class DeDuplicator extends Processor implements InitializingBean {
 	protected ProcessResult innerProcessResult(CrawlURI curi) throws InterruptedException {
         logger.finest("Processing " + curi.toString() + "(" + curi.getContentType() + ")");
 
-        stats.handledNumber++;
-        stats.totalAmount += curi.getContentSize();
+        stats.handledNumber.incrementAndGet();
+        stats.totalAmount.addAndGet(curi.getContentSize());
         Statistics currHostStats = null;
         if(statsPerHost){
             synchronized (perHostStats) {
@@ -189,8 +145,8 @@ public class DeDuplicator extends Processor implements InitializingBean {
                     perHostStats.put(host,currHostStats);
                 }
             }
-            currHostStats.handledNumber++;
-            currHostStats.totalAmount += curi.getContentSize();
+            currHostStats.handledNumber.incrementAndGet();
+            currHostStats.totalAmount.addAndGet(curi.getContentSize());
         }
         
         String url = curi.getURI();
@@ -201,14 +157,13 @@ public class DeDuplicator extends Processor implements InitializingBean {
         
         if (duplicate != null){
             // Increment statistics counters
-            stats.duplicateAmount += curi.getContentSize();
-            stats.duplicateNumber++;
-            stats.accountFor(duplicate);
+            stats.duplicateAmount.addAndGet(curi.getContentSize());
+            stats.duplicateNumber.incrementAndGet();
             if(statsPerHost){ 
-                currHostStats.duplicateAmount+=curi.getContentSize();
-                currHostStats.duplicateNumber++;
-                currHostStats.accountFor(duplicate);
+                currHostStats.duplicateAmount.addAndGet(curi.getContentSize());
+                currHostStats.duplicateNumber.incrementAndGet();
             }
+            count(duplicate, url, canonicalizedURL, currHostStats);
 
             // Attach revisit profile to CURI. This will inform downstream processors that we've 
             // marked this as a duplicate/revisit
@@ -237,7 +192,24 @@ public class DeDuplicator extends Processor implements InitializingBean {
         return ProcessResult.PROCEED;
 	}
 
-
+	private void count(Duplicate dup, String url, String canonicalUrl, Statistics currHostStats) {
+		if (dup.getUrl().equals(url)) {
+			stats.exactURLDuplicates.incrementAndGet();
+			if (statsPerHost) {
+				currHostStats.exactURLDuplicates.incrementAndGet();
+			}
+		} else if (canonicalizer.canonicalize(dup.getUrl()).equals(canonicalUrl)) {
+			stats.canonicalURLDuplicates.incrementAndGet();
+			if (statsPerHost) {
+				currHostStats.canonicalURLDuplicates.incrementAndGet();
+			}
+		} else {
+			stats.digestDuplicates.incrementAndGet();
+			if (statsPerHost) {
+				currHostStats.digestDuplicates.incrementAndGet();
+			}
+		}
+	}
     
 	public String report() {
         StringBuilder ret = new StringBuilder();
@@ -247,15 +219,16 @@ public class DeDuplicator extends Processor implements InitializingBean {
         ret.append("  Function:          Set revisit profile on records deemed duplicate by hash comparison\n");
         ret.append("  Total handled:     " + stats.handledNumber + "\n");
         ret.append("  Duplicates found:  " + stats.duplicateNumber + " " + 
-        		getPercentage(stats.duplicateNumber,stats.handledNumber) + "\n");
+        		getPercentage(stats.duplicateNumber.get(),stats.handledNumber.get()) + "\n");
         ret.append("  Bytes total:       " + stats.totalAmount + " (" + 
-        		ArchiveUtils.formatBytesForDisplay(stats.totalAmount) + ")\n");
+        		ArchiveUtils.formatBytesForDisplay(stats.totalAmount.get()) + ")\n");
         ret.append("  Bytes duplicte:    " + stats.duplicateAmount + " (" + 
-        		ArchiveUtils.formatBytesForDisplay(stats.duplicateAmount) + ") " + 
-        		getPercentage(stats.duplicateAmount, stats.totalAmount) + "\n");
+        		ArchiveUtils.formatBytesForDisplay(stats.duplicateAmount.get()) + ") " + 
+        		getPercentage(stats.duplicateAmount.get(), stats.totalAmount.get()) + "\n");
         
-    	ret.append("  New (no hits):     " + (stats.handledNumber-
-    			(stats.digestDuplicates+stats.exactURLDuplicates+stats.canonicalURLDuplicates)) + "\n");
+    	ret.append("  New (no hits):     " + (stats.handledNumber.get()-
+    			(stats.digestDuplicates.get()+stats.exactURLDuplicates.get()+
+    			 stats.canonicalURLDuplicates.get())) + "\n");
     	ret.append("  Exact hits:        " + stats.exactURLDuplicates + "\n");
     	ret.append("  Canonical hits:    " + stats.canonicalURLDuplicates + "\n");
        	ret.append("  Digest hits:       " + stats.digestDuplicates + "\n");
@@ -279,10 +252,10 @@ public class DeDuplicator extends Processor implements InitializingBean {
                     ret.append(" ");
                     ret.append(curr.duplicateAmount);
                     ret.append(" ");
-                    ret.append(curr.handledNumber-
-                            (curr.digestDuplicates+
-                             curr.exactURLDuplicates+
-                             curr.canonicalURLDuplicates));
+                    ret.append(curr.handledNumber.get()-
+                            (curr.digestDuplicates.get()+
+                             curr.exactURLDuplicates.get()+
+                             curr.canonicalURLDuplicates.get()));
                     ret.append(" ");
                     ret.append(curr.exactURLDuplicates);
                     ret.append(" ");
@@ -315,47 +288,33 @@ class Statistics{
     /** Number of URIs that make it through the processors exclusion rules
      *  and are processed by it.
      */
-    long handledNumber = 0;
+    AtomicLong handledNumber = new AtomicLong(0);
     
-    /** Number of URIs that are deemed duplicates and further processing is
-     *  aborted
+    /** Number of URIs that are deemed duplicates
      */
-    long duplicateNumber = 0;
+    AtomicLong duplicateNumber = new AtomicLong(0);
     
     /** Then number of URIs that turned out to have exact URL and content 
      *  digest matches.
      */
-    long exactURLDuplicates = 0;
+    AtomicLong exactURLDuplicates = new AtomicLong(0);
     
-    /** The number of URIs that turned out to have equivalent URL and content
-     *  digest matches.
+    /** The number of URIs that turned out to have canonical URL and content
+     *  digest matches. Does not include exact matches.
      */
-    long canonicalURLDuplicates = 0;
+    AtomicLong canonicalURLDuplicates = new AtomicLong(0);
     
-    /** The number of URIs that, while having no exact or equivalent matches,  
-     *  do have exact content digest matches against non-equivalent URIs.
+    /** The number of URIs that, while having no exact or canonical matches,  
+     *  do have exact content digest matches against other URIs.
      */
-    long digestDuplicates = 0;
+    AtomicLong digestDuplicates = new AtomicLong(0);
     
     /** The total amount of data represented by the documents who were deemed
      *  duplicates and excluded from further processing.
      */
-    long duplicateAmount = 0;
+    AtomicLong duplicateAmount = new AtomicLong(0);
     
     /** The total amount of data represented by all the documents processed **/
-    long totalAmount = 0;
+    AtomicLong totalAmount = new AtomicLong(0);
 
-    public void accountFor(Duplicate duplicate) {
-        switch (duplicate.getType()) {
-		case CANONICAL_URL:
-			canonicalURLDuplicates++;
-			break;
-		case DIGEST_ONLY:
-			digestDuplicates++;
-			break;
-		case EXACT_URL:
-			exactURLDuplicates++;
-			break;
-        }
-    }
 }
