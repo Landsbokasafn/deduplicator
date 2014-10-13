@@ -3,6 +3,13 @@
 The following applies to the (as yet unreleased) DeDuplicator version 3.1.0 for Heritrix 3.3.0 (also not yet 
 released as stable). For older versions, see [here](started-old.html).
 
+### Terminology
+
+**Duplicate** and **revisit** are used interchangeably in this document.  
+The WARC standard uses the term *revisit* exclusively but historically, this module has used the term `duplicate`.  
+In either case, we are referring to an instance where the response body of one URL+Time matches the response body of another URL+Time. Time is the time when the URL was requested. The comparison is only of the response body (the actual content, or document) and excludes headers. Duplicates are determined by comparing digests (usually SHA-1) of the body.
+
+
 ### Requirements
 
  * **Operating system:** Linux (using bash command shell).  
@@ -179,7 +186,16 @@ As you can see, DIGEST_ANY is, by itself, sufficient. The other are provided for
 
 #### Crawl.log Extra Info
 
+If you wish to build subsequent indexes on the `crawl.log` output, it is necessary to capture the original URL and time of capture for each URL deemed a duplicate/revisit. This is done by enabling the `logExtraInfo` setting on the `CrawlerLoggerModule`. This appends a JSON data structure to the end of each line in the `crawl.log`. The DeDuplicator will add the necessary fields to this JSON array for the `CrawlLogIterator` to be able to read.
+
+If you do not intend to build indexes based on `crawl.log`s you may disable this function, making the log file smaller. Do note, however, that indexing based on WARC files is considerably slower as each WARC needs to be read, in full.
 
 #### The DeDuplicator report 
 
-  
+The DeDuplicator report has always been available as part of the overall Processors Report. With this version (assuming you retain the relevant modifications to the crawl profile), it is also available directly from the GUI and saved to disk at the end of a crawl. See further in the `STATISTICSTRACKER` section of the crawl profile.
+
+The report contains overall statistics about the number duplicates, subdivided by exact url, canonical url and digest only hits. This division is calculated and so even if the URL isn't indexed and all searches are done by digest only, you can still have exact url matches.
+
+This report supplements the regular Heritrix tracking for 'dupByHash' counts which should match it.   
+ 
+It is possible to track this data on a host-by-host basis by enabling the relevant property on the Processor (`statsPerHost`). This is not recommended for large scale crawls as the data structures are not disk backed and memory usage will grow in line with the number of unique hosts encountered.
