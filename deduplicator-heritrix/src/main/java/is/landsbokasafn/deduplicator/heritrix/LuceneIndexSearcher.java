@@ -20,7 +20,6 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -39,8 +38,6 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     protected boolean digestIndexed = false; // Is the Digest field indexed
     protected boolean canoncialAvailable = false; // Is the URL_Canonicalized field present. Indexed if URL is.
 
-    private long recordsInIndex = -1;
-    
     private String indexLocation;
     /**
      * Set the location of the index in the filesystem. Changing this value after the bean has been 
@@ -80,7 +77,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     
     private void openIndex(String indexLocation) {
     	if (searcher!=null) {
-    		throw new IllegalStateException("Already have an index");
+    		throw new IllegalStateException("Already have an open index");
     	}
     	try {
             dReader = DirectoryReader.open(new NIOFSDirectory(new File(indexLocation)));
@@ -110,12 +107,6 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
         } catch (NullPointerException e) {
         	canoncialAvailable=false;
         }
-        try {
-			CollectionStatistics urlStats = searcher.collectionStatistics(URL.name());
-			recordsInIndex = urlStats.maxDoc();
-		} catch (IOException e) {
-			logger.log(Level.SEVERE,"Error accessing URL statistics of index " + indexLocation, e);
-		}
     }
     
     /**
@@ -237,7 +228,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	sb.append(" Search strategy: " + getSearchStrategy());
     	sb.append("\n");
 		sb.append(" Records in index: ");
-		sb.append(recordsInIndex);
+		sb.append(dReader.numDocs());
     	sb.append("\n");
     	
     	return sb.toString();
