@@ -23,7 +23,6 @@ import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.REVISIT_ANNOTA
 
 import java.text.NumberFormat;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
@@ -64,15 +63,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
         this.index=index;
     }
 
-    /* Should statistics be tracked per host? **/
-   	boolean statsPerHost=false;
-    public boolean getStatsPerHost(){
-    	return statsPerHost;
-    }
-    public void setStatsPerHost(boolean statsPerHost){
-    	this.statsPerHost=statsPerHost;
-    }
-
     // Spring configured access to Heritrix resources
     
     // Gain access to the ServerCache for host based statistics.
@@ -88,20 +78,14 @@ public class DeDuplicator extends Processor implements InitializingBean {
     // TODO: Consider making configurable. Needs to match what is written to the index though.
     AggressiveUrlCanonicalizer canonicalizer = new AggressiveUrlCanonicalizer();
 
-    
     // Member variables.
     protected Statistics stats = null;
     protected HashMap<String, Statistics> perHostStats = null;
 
     public void afterPropertiesSet() throws Exception {
-        // Initialize statistics accumulators
         stats = new Statistics();
-        if (statsPerHost) {
-            perHostStats = new HashMap<String, Statistics>();
-        }
     }
     
-
 	@Override
 	protected boolean shouldProcess(CrawlURI curi) {
         if (curi.is2XXSuccess() == false) {
@@ -127,7 +111,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
     protected void innerProcess(CrawlURI puri) {
     	throw new AssertionError();
     }
-
 	
 	@Override
 	protected ProcessResult innerProcessResult(CrawlURI curi) throws InterruptedException {
@@ -135,19 +118,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
 
         stats.handledNumber.incrementAndGet();
         stats.totalAmount.addAndGet(curi.getContentSize());
-        Statistics currHostStats = null;
-        if(statsPerHost){
-            synchronized (perHostStats) {
-                String host = getServerCache().getHostFor(curi.getUURI()).getHostName();
-                currHostStats = perHostStats.get(host);
-                if(currHostStats==null){
-                    currHostStats = new Statistics();
-                    perHostStats.put(host,currHostStats);
-                }
-            }
-            currHostStats.handledNumber.incrementAndGet();
-            currHostStats.totalAmount.addAndGet(curi.getContentSize());
-        }
         
         String url = curi.getURI();
         String canonicalizedURL = canonicalizer.canonicalize(url);
@@ -159,11 +129,8 @@ public class DeDuplicator extends Processor implements InitializingBean {
             // Increment statistics counters
             stats.duplicateAmount.addAndGet(curi.getContentSize());
             stats.duplicateNumber.incrementAndGet();
-            if(statsPerHost){ 
-                currHostStats.duplicateAmount.addAndGet(curi.getContentSize());
-                currHostStats.duplicateNumber.incrementAndGet();
-            }
-            count(duplicate, url, canonicalizedURL, currHostStats);
+
+            count(duplicate, url, canonicalizedURL);
 
             // Attach revisit profile to CURI. This will inform downstream processors that we've 
             // marked this as a duplicate/revisit
@@ -191,23 +158,14 @@ public class DeDuplicator extends Processor implements InitializingBean {
         
         return ProcessResult.PROCEED;
 	}
-
-	private void count(Duplicate dup, String url, String canonicalUrl, Statistics currHostStats) {
+	
+	private void count(Duplicate dup, String url, String canonicalUrl) {
 		if (dup.getUrl().equals(url)) {
 			stats.exactURLDuplicates.incrementAndGet();
-			if (statsPerHost) {
-				currHostStats.exactURLDuplicates.incrementAndGet();
-			}
 		} else if (canonicalizer.canonicalize(dup.getUrl()).equals(canonicalUrl)) {
 			stats.canonicalURLDuplicates.incrementAndGet();
-			if (statsPerHost) {
-				currHostStats.canonicalURLDuplicates.incrementAndGet();
-			}
 		} else {
 			stats.digestDuplicates.incrementAndGet();
-			if (statsPerHost) {
-				currHostStats.digestDuplicates.incrementAndGet();
-			}
 		}
 	}
     
@@ -233,39 +191,6 @@ public class DeDuplicator extends Processor implements InitializingBean {
     	ret.append("  Canonical hits:    " + stats.canonicalURLDuplicates + "\n");
        	ret.append("  Digest hits:       " + stats.digestDuplicates + "\n");
         
-        if(statsPerHost){
-            ret.append("  [Host] [total] [duplicates] [bytes] " +
-                    "[bytes discarded] [new] [exact] [canon] [digest]");
-            ret.append("\n");
-            synchronized (perHostStats) {
-                Iterator<String> it = perHostStats.keySet().iterator();
-                while(it.hasNext()){
-                    String key = it.next();
-                    Statistics curr = perHostStats.get(key);
-                    ret.append("  " +key);
-                    ret.append(" ");
-                    ret.append(curr.handledNumber);
-                    ret.append(" ");
-                    ret.append(curr.duplicateNumber);
-                    ret.append(" ");
-                    ret.append(curr.totalAmount);
-                    ret.append(" ");
-                    ret.append(curr.duplicateAmount);
-                    ret.append(" ");
-                    ret.append(curr.handledNumber.get()-
-                            (curr.digestDuplicates.get()+
-                             curr.exactURLDuplicates.get()+
-                             curr.canonicalURLDuplicates.get()));
-                    ret.append(" ");
-                    ret.append(curr.exactURLDuplicates);
-                    ret.append(" ");
-                    ret.append(curr.canonicalURLDuplicates);
-                    ret.append(" ");
-                    ret.append(curr.digestDuplicates);
-                    ret.append("\n");
-                }
-            }
-        }
        	ret.append("\n");
        	ret.append("Index:\n");
        	ret.append(index.getInfo());

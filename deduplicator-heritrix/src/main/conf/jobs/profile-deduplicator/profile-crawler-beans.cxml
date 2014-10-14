@@ -279,7 +279,6 @@
 		<property name="index">
 			<ref bean="deduplicatorIndex" />
 		</property>
-		<!-- <property name="statsPerHost" value="false" /> -->
 	</bean>
 	<bean id="deduplicatorIndex"
 		class="is.landsbokasafn.deduplicator.heritrix.LuceneIndexSearcher">

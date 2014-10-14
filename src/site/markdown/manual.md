@@ -205,5 +205,3 @@ The DeDuplicator report has always been available as part of the overall Process
 The report contains overall statistics about the number duplicates, subdivided by exact url, canonical url and digest only hits. This division is calculated and so even if the URL isn't indexed and all searches are done by digest only, you can still have exact url matches.
 
 This report supplements the regular Heritrix tracking for 'dupByHash' counts which should match it.   
- 
-It is possible to track this data on a host-by-host basis by enabling the relevant property on the Processor (`statsPerHost`). This is not recommended for large scale crawls as the data structures are not disk backed and memory usage will grow in line with the number of unique hosts encountered.
