@@ -1,16 +1,16 @@
-## DeDuplicator Manual
+# DeDuplicator Manual
 
 The following applies to the (as yet unreleased) DeDuplicator version 3.1.0 for Heritrix 3.3.0 (also not yet 
 released as stable). For older versions, see [here](started-old.html).
 
-### Terminology
+## Terminology
 
 **Duplicate** and **revisit** are used interchangeably in this document.  
 The WARC standard uses the term *revisit* exclusively but historically, this module has used the term `duplicate`.  
 In either case, we are referring to an instance where the response body of one URL+Time matches the response body of another URL+Time. Time is the time when the URL was requested. The comparison is only of the response body (the actual content, or document) and excludes headers. Duplicates are determined by comparing digests (usually SHA-1) of the body.
 
 
-### Requirements
+## Requirements
 
  * **Operating system:** Linux (using bash command shell).  
    It is possible to run under other configurations, but those are not directly supported and will require
@@ -18,7 +18,7 @@ In either case, we are referring to an instance where the response body of one U
  * **Heritrix:** Version 3.3.0 (still unreleased, use a build made after July 2014).
  * **Java:** Java 6 (or better). This matches Heritrix. 
 
-### Install the DeDuplicator
+## Install the DeDuplicator
 
 A pre-built download will be made available soonish. For now, you need to download the source from Github 
 (https://github.com/Landsbokasafn/deduplicator) either via Git clone, or by downloading it as a 
@@ -35,7 +35,7 @@ part of the DeDuplicator.
 
 You'll also find a `heritrix` folder that we'll get to later.
 
-### Understanding the index
+## Understanding the index
 
 The DeDuplicator relies on a pre-built Lucene index. This is consulted during crawl time to determine if a resource
 can be filtered out as a duplicate/revisit.
@@ -62,7 +62,7 @@ Optional fields are:
  * Original Record ID - The original record]s `WARC-Refers-To` header value. Used for the `WARC-Refers-To` field in a revisit record when available.
 
 
-### Run the indexer
+## Run the indexer
 
 Under the installation directory, you'll find `conf/deduplicator.properties`. This file contains default
 configuration options. Most can be amended via command line parameters. The default properties file contains the
@@ -104,7 +104,7 @@ Arguments:
                             exist, but unless --add should be empty.
 ```
  
-#### Filter input
+### Filter input
 
 It is possible to filter what URLs are added to the index based on their mimetype (content type). This is done
 via the `--mime` option. This is a blacklist by default, but can be treated as a whitelist by using the `--whitelist` option.
@@ -117,7 +117,7 @@ Indexing all URLs is simply a matter of setting `--mime .*` and `--whitelist`.
  
 Currently, only those URLs that are successfully crawled (i.e. have an HTTP status code of 200) will be included, regardless of mimetype.
 
-#### CrawlDataIterator
+### CrawlDataIterator
 
 Data is fed to the indexing process by a `CrawlDataIterator`. This is configured via the `--iterator` (fully qualified classname) or, more easily via the `deduplicator.properties` file.
 
@@ -134,7 +134,7 @@ The DeDuplicator ships with two such iterators.
  suitable annotations and JSON 'extra information'.  
  Otherwise, it may be necessary to adjust the `deduplicator.crawllogiterator.revisit-annotation-regex` property in the properties to ensure that duplicate records do not get indexed as original captures.
 
-#### Building the index
+### Building the index
 
 The only thing left, now, is to decide on the structure of the index.
 
@@ -151,7 +151,11 @@ indexed, then a new occurrence of the digest will replace previous ones in the i
 
 ## Heritrix module
 
-TODO: Installing in Heritrix
+In the DeDuplicator's install directory, you'll find a folder named `heritrix`. Inside is an archive named `deduplicator-dist-<version>-heritrix.tar.gz`. Extract this file into the root directory of an Heritrix install (commonly refferred to as `$HERITRIX_HOME`).
+
+This will cause the necessary JAR files to be copied into Heritrix's `lib` folder. It will also create a profile job under Heritrix's `job` folder (assumes you havn't specified a non-default location for this).
+
+Once the archive has been extracted you can launch Heritrix and move to configuring your crawl to use the DeDuplicator.
 
 ### Configuring Heritrix
 
