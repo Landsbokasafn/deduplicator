@@ -123,46 +123,38 @@ public class DeDuplicator extends Processor implements InitializingBean {
         String canonicalizedURL = canonicalizer.canonicalize(url);
 		String digest = curi.getContentDigestString();
         
-        Duplicate duplicate = index.lookup(url, canonicalizedURL, digest); 
+        IdenticalPayloadDigestRevisit duplicate = index.lookup(url, canonicalizedURL, digest); 
         
         if (duplicate != null){
+        	// A little sanity check
+        	if (duplicate.getPayloadDigest().equals(curi.getContentDigest())==false) {
+        		throw new IllegalStateException("Digest for CURI and duplicate does not match for " + curi.toString());
+        	}
             // Increment statistics counters
             stats.duplicateAmount.addAndGet(curi.getContentSize());
             stats.duplicateNumber.incrementAndGet();
-
             count(duplicate, url, canonicalizedURL);
 
             // Attach revisit profile to CURI. This will inform downstream processors that we've 
             // marked this as a duplicate/revisit
-        	IdenticalPayloadDigestRevisit revisitProfile = 
-        			new IdenticalPayloadDigestRevisit(curi.getContentDigestString());
-        	
-        	revisitProfile.setRefersToTargetURI(duplicate.getUrl());
-       		revisitProfile.setRefersToDate(duplicate.getDate());
-        	
-        	String refersToRecordID = duplicate.getWarcRecordId();
-        	if (refersToRecordID!=null && !refersToRecordID.isEmpty()) {
-        		revisitProfile.setRefersToRecordID(refersToRecordID);
-        	}
-        	
-        	curi.setRevisitProfile(revisitProfile);
+        	curi.setRevisitProfile(duplicate);
 
         	// Add annotation to crawl.log 
             curi.getAnnotations().add(REVISIT_ANNOTATION_MARKER);
             
             // Write extra logging information (needs to be enabled in CrawlerLoggerModule)
-            curi.addExtraInfo(EXTRA_REVISIT_PROFILE, revisitProfile.getProfileName());
-            curi.addExtraInfo(EXTRA_REVISIT_URI, revisitProfile.getRefersToTargetURI());
-            curi.addExtraInfo(EXTRA_REVISIT_DATE, revisitProfile.getRefersToDate());
+            curi.addExtraInfo(EXTRA_REVISIT_PROFILE, duplicate.getProfileName());
+            curi.addExtraInfo(EXTRA_REVISIT_URI, duplicate.getRefersToTargetURI());
+            curi.addExtraInfo(EXTRA_REVISIT_DATE, duplicate.getRefersToDate());
         }
         
         return ProcessResult.PROCEED;
 	}
 	
-	private void count(Duplicate dup, String url, String canonicalUrl) {
-		if (dup.getUrl().equals(url)) {
+	private void count(IdenticalPayloadDigestRevisit dup, String url, String canonicalUrl) {
+		if (dup.getRefersToTargetURI().equals(url)) {
 			stats.exactURLDuplicates.incrementAndGet();
-		} else if (canonicalizer.canonicalize(dup.getUrl()).equals(canonicalUrl)) {
+		} else if (canonicalizer.canonicalize(dup.getRefersToTargetURI()).equals(canonicalUrl)) {
 			stats.canonicalURLDuplicates.incrementAndGet();
 		} else {
 			stats.digestDuplicates.incrementAndGet();

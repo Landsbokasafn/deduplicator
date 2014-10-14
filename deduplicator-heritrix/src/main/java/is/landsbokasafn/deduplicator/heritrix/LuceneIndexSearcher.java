@@ -26,6 +26,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.NIOFSDirectory;
+import org.archive.modules.revisit.IdenticalPayloadDigestRevisit;
 import org.springframework.beans.factory.InitializingBean;
 
 public class LuceneIndexSearcher implements Index, InitializingBean {
@@ -150,7 +151,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     }
     
     @Override
-	public Duplicate lookup(String url, String canonicalizedUrl, String digest) {
+	public IdenticalPayloadDigestRevisit lookup(String url, String canonicalizedUrl, String digest) {
     	switch (strategy) {
 		case URL_EXACT:
 			return lookupUrlExact(url, digest);
@@ -162,14 +163,14 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	return null;
     }
     
-    protected Duplicate lookupUrlExact(final String url, final String digest) {
+    protected IdenticalPayloadDigestRevisit lookupUrlExact(final String url, final String digest) {
     	BooleanQuery q = new BooleanQuery();
     	q.add(new TermQuery(new Term(URL.name(), url)), Occur.MUST);
     	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
     	return query(q);
     }
     
-    protected Duplicate lookupUrlCanonical(final String url, final String canonicalizedUrl, final String digest) {
+    protected IdenticalPayloadDigestRevisit lookupUrlCanonical(final String url, final String canonicalizedUrl, final String digest) {
     	BooleanQuery q = new BooleanQuery();
     	q.add(new TermQuery(new Term(URL_CANONICALIZED.name(), url)), Occur.MUST);
     	q.add(new TermQuery(new Term(URL.name(), url)), Occur.SHOULD);
@@ -177,7 +178,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	return query(q);
     }
     
-    protected Duplicate lookupDigestAny(final String url, final String canonicalizedUrl, final String digest) {
+    protected IdenticalPayloadDigestRevisit lookupDigestAny(final String url, final String canonicalizedUrl, final String digest) {
     	BooleanQuery q = new BooleanQuery();
     	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
     	if (urlIndexed) {
@@ -196,8 +197,8 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
      *              the most appropriate one to use if there are multiple hits.
      * @return A duplicate based on the first hit of the query or null if query returned no hits.
      */
-	protected Duplicate query(Query query) {
-        Duplicate duplicate = null; 
+	protected IdenticalPayloadDigestRevisit query(Query query) {
+		IdenticalPayloadDigestRevisit duplicate = null; 
 		try {
 			ScoreDoc[] hits = searcher.search(query, null, 1).scoreDocs;
             if(hits != null && hits.length > 0){
@@ -209,12 +210,18 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 		return duplicate; 
 	}
 	
-	protected Duplicate wrap(Document doc) {
-		Duplicate dup = new Duplicate();
-		dup.setUrl(doc.get(URL.name()));
-		dup.setDate(doc.get(DATE.name()));
-		dup.setWarcRecordId(doc.get(ORIGINAL_RECORD_ID.name()));
-		return dup;
+	protected IdenticalPayloadDigestRevisit wrap(Document doc) {
+		IdenticalPayloadDigestRevisit duplicate = new IdenticalPayloadDigestRevisit(doc.get(DIGEST.name()));
+    	
+    	duplicate.setRefersToTargetURI(doc.get(URL.name()));
+   		duplicate.setRefersToDate(doc.get(DATE.name()));
+    	
+    	String refersToRecordID = doc.get(ORIGINAL_RECORD_ID.name());
+    	if (refersToRecordID!=null && !refersToRecordID.isEmpty()) {
+    		duplicate.setRefersToRecordID(refersToRecordID);
+    	}
+
+    	return duplicate;
 	}
 
     public String getInfo() {
