@@ -127,7 +127,7 @@ public class DeDuplicator extends Processor implements InitializingBean {
         
         if (duplicate != null){
         	// A little sanity check
-        	if (duplicate.getPayloadDigest().equals(curi.getContentDigest())==false) {
+        	if (duplicate.getPayloadDigest().equals(digest)==false) {
         		throw new IllegalStateException("Digest for CURI and duplicate does not match for " + curi.toString());
         	}
             // Increment statistics counters
