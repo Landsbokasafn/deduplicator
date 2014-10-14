@@ -11,6 +11,9 @@
 	<artifactId>deduplicator-indexer</artifactId>
 	<name>DeDuplicator Indexer</name>
 	<packaging>jar</packaging>
+    <properties>
+        <maven-site-plugin.skip>true</maven-site-plugin.skip>
+    </properties>
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>

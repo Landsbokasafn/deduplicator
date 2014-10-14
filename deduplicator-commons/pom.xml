@@ -12,6 +12,10 @@
 	<name>DeDuplicator Commons</name>
 	<packaging>jar</packaging>
 
+    <properties>
+        <maven-site-plugin.skip>true</maven-site-plugin.skip>
+    </properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.lucene</groupId>
