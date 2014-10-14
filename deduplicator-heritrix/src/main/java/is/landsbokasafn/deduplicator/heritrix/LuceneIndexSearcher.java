@@ -155,7 +155,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 		case URL_EXACT:
 			return lookupUrlExact(url, digest);
 		case URL_CANONICAL:
-			return lookupUrlCanonical(canonicalizedUrl, digest);
+			return lookupUrlCanonical(url, canonicalizedUrl, digest);
 		case DIGEST_ANY:
 			return lookupDigestAny(url, canonicalizedUrl, digest);
     	}
@@ -163,41 +163,20 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     }
     
     protected Duplicate lookupUrlExact(final String url, final String digest) {
-    	return lookupUrl(url, digest, URL.name());
-    }
-    
-    protected Duplicate lookupUrlCanonical(String canonicalizedUrl, String digest) {
-    	return lookupUrl(canonicalizedUrl, digest, URL_CANONICALIZED.name());
-    }
-    
-	protected Duplicate wrap(Document doc) {
-		Duplicate dup = new Duplicate();
-		dup.setUrl(doc.get(URL.name()));
-		dup.setDate(doc.get(DATE.name()));
-		dup.setWarcRecordId(doc.get(ORIGINAL_RECORD_ID.name()));
-		return dup;
-	}
-
-	private Duplicate lookupUrl(final String url, final String digest, final String field) {
-		Query query = null;
     	BooleanQuery q = new BooleanQuery();
-    	q.add(new TermQuery(new Term(field, url)), Occur.MUST);
+    	q.add(new TermQuery(new Term(URL.name(), url)), Occur.MUST);
     	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
-		query = q;
-			
-        Duplicate duplicate = null; 
-		try {
-			ScoreDoc[] hits = searcher.search(query, null, 1).scoreDocs;
-            if(hits != null && hits.length > 0){
-            	// May be multiple hits, but all hits are equal as far as we are concerned.
-                duplicate = wrap(searcher.doc(hits[0].doc));
-            }
-		} catch (IOException e) {
-			logger.log(Level.SEVERE, "Error accessing index.", e);
-		}
-		return duplicate; // Didn't find a match
-	}
-	
+    	return query(q);
+    }
+    
+    protected Duplicate lookupUrlCanonical(final String url, final String canonicalizedUrl, final String digest) {
+    	BooleanQuery q = new BooleanQuery();
+    	q.add(new TermQuery(new Term(URL_CANONICALIZED.name(), url)), Occur.MUST);
+    	q.add(new TermQuery(new Term(URL.name(), url)), Occur.SHOULD);
+    	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
+    	return query(q);
+    }
+    
     protected Duplicate lookupDigestAny(final String url, final String canonicalizedUrl, final String digest) {
     	BooleanQuery q = new BooleanQuery();
     	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
@@ -207,20 +186,37 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 	    	}
     		q.add(new TermQuery(new Term(URL.name(), url)), Occur.SHOULD);
     	}
-		
+        return query(q);
+    }
+
+    /**
+     * Do a search for duplicates in the index based on the provided query. 
+     * @param query The query to perform. Query must be structured so that any results returned are valid duplicates
+     *              (i.e. mandatory search term on appropriate digest) and structured so that the first hit is 
+     *              the most appropriate one to use if there are multiple hits.
+     * @return A duplicate based on the first hit of the query or null if query returned no hits.
+     */
+	protected Duplicate query(Query query) {
         Duplicate duplicate = null; 
-        try {
-            ScoreDoc[] hits = searcher.search(q, null, 1).scoreDocs; 
+		try {
+			ScoreDoc[] hits = searcher.search(query, null, 1).scoreDocs;
             if(hits != null && hits.length > 0){
-            	// May be multiple hits, but all hits are equal as far as we are concerned.
                 duplicate = wrap(searcher.doc(hits[0].doc));
             }
-        } catch (IOException e) {
-            logger.log(Level.SEVERE,"Error accessing index.",e);
-        }
-        return duplicate;
-    }
-    
+		} catch (IOException e) {
+			logger.log(Level.SEVERE, "Error accessing index.", e);
+		}
+		return duplicate; 
+	}
+	
+	protected Duplicate wrap(Document doc) {
+		Duplicate dup = new Duplicate();
+		dup.setUrl(doc.get(URL.name()));
+		dup.setDate(doc.get(DATE.name()));
+		dup.setWarcRecordId(doc.get(ORIGINAL_RECORD_ID.name()));
+		return dup;
+	}
+
     public String getInfo() {
     	StringBuilder sb = new StringBuilder();
     	sb.append(LuceneIndexSearcher.class.getCanonicalName());
