@@ -41,7 +41,8 @@
 				# Allowed values are:
 				# URL_EXACT -- Search on URL
 				# URL_CANONICAL -- Search on canonical form of URL
-				# DIGEST_ANY -- Search by digest
+				# DIGEST_URL_PREFERRED -- Search by digest but prefer URL_EXACT and URL_CANONICAL hits when available
+				# DIGEST_ANY -- Search by digest, URL is not considered at all
 				deduplicatorIndex.searchStrategy=DIGEST_ANY
 
 				##..more?..##
