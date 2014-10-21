@@ -39,6 +39,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     protected boolean canoncialAvailable = false; // Is the URL_Canonicalized field present. Indexed if URL is.
 
     private String indexLocation;
+    private int numDocs = -1;
     /**
      * Set the location of the index in the filesystem. Changing this value after the bean has been 
      * initialized will have no effect.
@@ -107,6 +108,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
         } catch (NullPointerException e) {
         	canoncialAvailable=false;
         }
+        numDocs = dReader.numDocs();
     }
     
     /**
@@ -147,9 +149,11 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 		case URL_EXACT:
 			return lookupUrlExact(url, digest);
 		case URL_CANONICAL:
-			return lookupUrlCanonical(url, canonicalizedUrl, digest);
+			return lookupUrlCanonical(canonicalizedUrl, digest);
 		case DIGEST_ANY:
-			return lookupDigestAny(url, canonicalizedUrl, digest);
+			return lookupDigestAny(url, digest);
+		case DIGEST_URL_PREFERED:
+			return lookupDigestUrlPrefered(url,canonicalizedUrl,digest);
     	}
     	return null;
     }
@@ -161,15 +165,15 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	return query(q);
     }
     
-    protected IdenticalPayloadDigestRevisit lookupUrlCanonical(final String url, final String canonicalizedUrl, final String digest) {
+    protected IdenticalPayloadDigestRevisit lookupUrlCanonical(final String canonicalizedUrl, final String digest) {
     	BooleanQuery q = new BooleanQuery();
-    	q.add(new TermQuery(new Term(URL_CANONICALIZED.name(), url)), Occur.MUST);
-    	q.add(new TermQuery(new Term(URL.name(), url)), Occur.SHOULD);
+    	q.add(new TermQuery(new Term(URL_CANONICALIZED.name(), canonicalizedUrl)), Occur.MUST);
     	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
     	return query(q);
     }
     
-    protected IdenticalPayloadDigestRevisit lookupDigestAny(final String url, final String canonicalizedUrl, final String digest) {
+    protected IdenticalPayloadDigestRevisit lookupDigestUrlPrefered(
+    		final String url, final String canonicalizedUrl, final String digest) {
     	BooleanQuery q = new BooleanQuery();
     	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
     	if (urlIndexed) {
@@ -179,6 +183,10 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     		q.add(new TermQuery(new Term(URL.name(), url)), Occur.SHOULD);
     	}
         return query(q);
+    }
+
+    protected IdenticalPayloadDigestRevisit lookupDigestAny(final String url, final String digest) {
+        return query(new TermQuery(new Term(DIGEST.name(), digest)));
     }
 
     /**
@@ -228,7 +236,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	sb.append(" Search strategy: " + getSearchStrategy());
     	sb.append("\n");
 		sb.append(" Records in index: ");
-		sb.append(dReader.numDocs());
+		sb.append(numDocs);
     	sb.append("\n");
     	
     	return sb.toString();
