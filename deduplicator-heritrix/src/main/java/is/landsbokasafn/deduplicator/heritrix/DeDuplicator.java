@@ -83,6 +83,12 @@ public class DeDuplicator extends Processor {
     /** The total amount of data represented by all the documents processed **/
     AtomicLong totalAmount = new AtomicLong(0);
 
+    /** Accumulated time spent doing lookups, in nanoseconds. Divide by handledNumber for average lookup time **/
+    AtomicLong cumulativeLookupDuration = new AtomicLong(0);
+    
+    /** The number of nanoseconds the last lookup took. **/
+    long lastLookupDuration = -1L;
+    
     // Spring configurable parameters
     
     /* Index to use */
@@ -146,8 +152,12 @@ public class DeDuplicator extends Processor {
         String canonicalizedURL = canonicalizer.canonicalize(url);
 		String digest = curi.getContentDigestString();
         
-        IdenticalPayloadDigestRevisit duplicate = index.lookup(url, canonicalizedURL, digest); 
-        
+		long beginLookup = System.nanoTime();
+        IdenticalPayloadDigestRevisit duplicate = index.lookup(url, canonicalizedURL, digest);
+        long lookupTook = System.nanoTime()-beginLookup;
+        cumulativeLookupDuration.addAndGet(lookupTook);
+        lastLookupDuration=lookupTook;
+
         if (duplicate != null){
         	// A little sanity check
         	if (duplicate.getPayloadDigest().equals(digest)==false) {
@@ -205,7 +215,10 @@ public class DeDuplicator extends Processor {
     	ret.append("  Exact hits:        " + exactURLDuplicates + "\n");
     	ret.append("  Canonical hits:    " + canonicalURLDuplicates + "\n");
        	ret.append("  Digest hits:       " + digestDuplicates + "\n");
-        
+       	ret.append("  Average lookup time: " + String.format("%.3f", 
+       			(double)(cumulativeLookupDuration.get()/handledNumber.get())/1000000d)  + " ms\n");
+       	ret.append("  Last lookup time:    " + String.format("%.3f",(double)(lastLookupDuration/1000000d)) + " ms\n");
+       	
        	ret.append("\n");
        	ret.append("Index:\n");
        	ret.append(index.getInfo());
@@ -221,4 +234,3 @@ public class DeDuplicator extends Processor {
 	}
 
 }
-
