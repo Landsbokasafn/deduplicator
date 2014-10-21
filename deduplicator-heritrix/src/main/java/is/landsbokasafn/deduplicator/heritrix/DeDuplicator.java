@@ -22,7 +22,6 @@ import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.EXTRA_REVISIT_
 import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.REVISIT_ANNOTATION_MARKER;
 
 import java.text.NumberFormat;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
@@ -34,7 +33,6 @@ import org.archive.modules.net.ServerCache;
 import org.archive.modules.revisit.IdenticalPayloadDigestRevisit;
 import org.archive.util.ArchiveUtils;
 import org.archive.wayback.util.url.AggressiveUrlCanonicalizer;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -47,161 +45,12 @@ import org.springframework.beans.factory.annotation.Autowired;
  * 
  * @author Kristinn Sigur&eth;sson
  */
-public class DeDuplicator extends Processor implements InitializingBean {
+public class DeDuplicator extends Processor {
 
     private static Logger logger =
         Logger.getLogger(DeDuplicator.class.getName());
 
-    // Spring configurable parameters
-    
-    /* Index to use */
-    Index index;
-    public Index getIndex() {
-        return index;
-    }
-    public void setIndex(Index index) {
-        this.index=index;
-    }
-
-    // Spring configured access to Heritrix resources
-    
-    // Gain access to the ServerCache for host based statistics.
-    protected ServerCache serverCache;
-    public ServerCache getServerCache() {
-        return this.serverCache;
-    }
-    @Autowired
-    public void setServerCache(ServerCache serverCache) {
-        this.serverCache = serverCache;
-    }
-    
-    // TODO: Consider making configurable. Needs to match what is written to the index though.
-    AggressiveUrlCanonicalizer canonicalizer = new AggressiveUrlCanonicalizer();
-
-    // Member variables.
-    protected Statistics stats = null;
-    protected HashMap<String, Statistics> perHostStats = null;
-
-    public void afterPropertiesSet() throws Exception {
-        stats = new Statistics();
-    }
-    
-	@Override
-	protected boolean shouldProcess(CrawlURI curi) {
-        if (curi.is2XXSuccess() == false) {
-            // No point in doing comparison on failed downloads.
-            logger.finest("Not handling " + curi.toString() + ", did not succeed.");
-            return false;
-        }
-        if (curi.isHttpTransaction()==false) {
-            // Non-http documents are not handled at present
-            logger.finest("Not handling " + curi.toString() + ", non-http.");
-            return false;
-        }
-        if(curi.isRevisit()){
-            // A previous processor or filter has judged this CrawlURI to be a revisit
-            logger.finest("Not handling " + curi.toString()
-                    + ", already flagged as revisit.");
-            return false;
-        }
-        return true;
-	}
-
-    @Override
-    protected void innerProcess(CrawlURI puri) {
-    	throw new AssertionError();
-    }
-	
-	@Override
-	protected ProcessResult innerProcessResult(CrawlURI curi) throws InterruptedException {
-        logger.finest("Processing " + curi.toString() + "(" + curi.getContentType() + ")");
-
-        stats.handledNumber.incrementAndGet();
-        stats.totalAmount.addAndGet(curi.getContentSize());
-        
-        String url = curi.getURI();
-        String canonicalizedURL = canonicalizer.canonicalize(url);
-		String digest = curi.getContentDigestString();
-        
-        IdenticalPayloadDigestRevisit duplicate = index.lookup(url, canonicalizedURL, digest); 
-        
-        if (duplicate != null){
-        	// A little sanity check
-        	if (duplicate.getPayloadDigest().equals(digest)==false) {
-        		throw new IllegalStateException("Digest for CURI and duplicate does not match for " + curi.toString());
-        	}
-            // Increment statistics counters
-            stats.duplicateAmount.addAndGet(curi.getContentSize());
-            stats.duplicateNumber.incrementAndGet();
-            count(duplicate, url, canonicalizedURL);
-
-            // Attach revisit profile to CURI. This will inform downstream processors that we've 
-            // marked this as a duplicate/revisit
-        	curi.setRevisitProfile(duplicate);
-
-        	// Add annotation to crawl.log 
-            curi.getAnnotations().add(REVISIT_ANNOTATION_MARKER);
-            
-            // Write extra logging information (needs to be enabled in CrawlerLoggerModule)
-            curi.addExtraInfo(EXTRA_REVISIT_PROFILE, duplicate.getProfileName());
-            curi.addExtraInfo(EXTRA_REVISIT_URI, duplicate.getRefersToTargetURI());
-            curi.addExtraInfo(EXTRA_REVISIT_DATE, duplicate.getRefersToDate());
-        }
-        
-        return ProcessResult.PROCEED;
-	}
-	
-	private void count(IdenticalPayloadDigestRevisit dup, String url, String canonicalUrl) {
-		if (dup.getRefersToTargetURI().equals(url)) {
-			stats.exactURLDuplicates.incrementAndGet();
-		} else if (canonicalizer.canonicalize(dup.getRefersToTargetURI()).equals(canonicalUrl)) {
-			stats.canonicalURLDuplicates.incrementAndGet();
-		} else {
-			stats.digestDuplicates.incrementAndGet();
-		}
-	}
-    
-	public String report() {
-        StringBuilder ret = new StringBuilder();
-        ret.append("Processor: ");
-        ret.append(DeDuplicator.class.getCanonicalName());
-        ret.append("\n");
-        ret.append("  Function:          Set revisit profile on records deemed duplicate by hash comparison\n");
-        ret.append("  Total handled:     " + stats.handledNumber + "\n");
-        ret.append("  Duplicates found:  " + stats.duplicateNumber + " " + 
-        		getPercentage(stats.duplicateNumber.get(),stats.handledNumber.get()) + "\n");
-        ret.append("  Bytes total:       " + stats.totalAmount + " (" + 
-        		ArchiveUtils.formatBytesForDisplay(stats.totalAmount.get()) + ")\n");
-        ret.append("  Bytes duplicte:    " + stats.duplicateAmount + " (" + 
-        		ArchiveUtils.formatBytesForDisplay(stats.duplicateAmount.get()) + ") " + 
-        		getPercentage(stats.duplicateAmount.get(), stats.totalAmount.get()) + "\n");
-        
-    	ret.append("  New (no hits):     " + (stats.handledNumber.get()-
-    			(stats.digestDuplicates.get()+stats.exactURLDuplicates.get()+
-    			 stats.canonicalURLDuplicates.get())) + "\n");
-    	ret.append("  Exact hits:        " + stats.exactURLDuplicates + "\n");
-    	ret.append("  Canonical hits:    " + stats.canonicalURLDuplicates + "\n");
-       	ret.append("  Digest hits:       " + stats.digestDuplicates + "\n");
-        
-       	ret.append("\n");
-       	ret.append("Index:\n");
-       	ret.append(index.getInfo());
-        
-        ret.append("\n");
-        return ret.toString();
-	}
-	
-	protected static String getPercentage(double portion, double total){
-		NumberFormat percentFormat = NumberFormat.getPercentInstance(Locale.ENGLISH);
-		percentFormat.setMaximumFractionDigits(1);
-		return percentFormat.format(portion/total);
-	}
-
-}
-
-class Statistics{
     // General statistics
-    
     /** Number of URIs that make it through the processors exclusion rules
      *  and are processed by it.
      */
@@ -234,4 +83,142 @@ class Statistics{
     /** The total amount of data represented by all the documents processed **/
     AtomicLong totalAmount = new AtomicLong(0);
 
+    // Spring configurable parameters
+    
+    /* Index to use */
+    Index index;
+    public Index getIndex() {
+        return index;
+    }
+    public void setIndex(Index index) {
+        this.index=index;
+    }
+
+    // Spring configured access to Heritrix resources
+    
+    // Gain access to the ServerCache for host based statistics.
+    protected ServerCache serverCache;
+    public ServerCache getServerCache() {
+        return this.serverCache;
+    }
+    @Autowired
+    public void setServerCache(ServerCache serverCache) {
+        this.serverCache = serverCache;
+    }
+    
+    // TODO: Consider making configurable. Needs to match what is written to the index though.
+    AggressiveUrlCanonicalizer canonicalizer = new AggressiveUrlCanonicalizer();
+
+	@Override
+	protected boolean shouldProcess(CrawlURI curi) {
+        if (curi.is2XXSuccess() == false) {
+            // No point in doing comparison on failed downloads.
+            logger.finest("Not handling " + curi.toString() + ", did not succeed.");
+            return false;
+        }
+        if (curi.isHttpTransaction()==false) {
+            // Non-http documents are not handled at present
+            logger.finest("Not handling " + curi.toString() + ", non-http.");
+            return false;
+        }
+        if(curi.isRevisit()){
+            // A previous processor or filter has judged this CrawlURI to be a revisit
+            logger.finest("Not handling " + curi.toString()
+                    + ", already flagged as revisit.");
+            return false;
+        }
+        return true;
+	}
+
+    @Override
+    protected void innerProcess(CrawlURI puri) {
+    	throw new AssertionError();
+    }
+	
+	@Override
+	protected ProcessResult innerProcessResult(CrawlURI curi) throws InterruptedException {
+        logger.finest("Processing " + curi.toString() + "(" + curi.getContentType() + ")");
+
+        handledNumber.incrementAndGet();
+        totalAmount.addAndGet(curi.getContentSize());
+        
+        String url = curi.getURI();
+        String canonicalizedURL = canonicalizer.canonicalize(url);
+		String digest = curi.getContentDigestString();
+        
+        IdenticalPayloadDigestRevisit duplicate = index.lookup(url, canonicalizedURL, digest); 
+        
+        if (duplicate != null){
+        	// A little sanity check
+        	if (duplicate.getPayloadDigest().equals(digest)==false) {
+        		throw new IllegalStateException("Digest for CURI and duplicate does not match for " + curi.toString());
+        	}
+            // Increment statistics counters
+            duplicateAmount.addAndGet(curi.getContentSize());
+            duplicateNumber.incrementAndGet();
+            count(duplicate, url, canonicalizedURL);
+
+            // Attach revisit profile to CURI. This will inform downstream processors that we've 
+            // marked this as a duplicate/revisit
+        	curi.setRevisitProfile(duplicate);
+
+        	// Add annotation to crawl.log 
+            curi.getAnnotations().add(REVISIT_ANNOTATION_MARKER);
+            
+            // Write extra logging information (needs to be enabled in CrawlerLoggerModule)
+            curi.addExtraInfo(EXTRA_REVISIT_PROFILE, duplicate.getProfileName());
+            curi.addExtraInfo(EXTRA_REVISIT_URI, duplicate.getRefersToTargetURI());
+            curi.addExtraInfo(EXTRA_REVISIT_DATE, duplicate.getRefersToDate());
+        }
+        
+        return ProcessResult.PROCEED;
+	}
+	
+	private void count(IdenticalPayloadDigestRevisit dup, String url, String canonicalUrl) {
+		if (dup.getRefersToTargetURI().equals(url)) {
+			exactURLDuplicates.incrementAndGet();
+		} else if (canonicalizer.canonicalize(dup.getRefersToTargetURI()).equals(canonicalUrl)) {
+			canonicalURLDuplicates.incrementAndGet();
+		} else {
+			digestDuplicates.incrementAndGet();
+		}
+	}
+    
+	public String report() {
+        StringBuilder ret = new StringBuilder();
+        ret.append("Processor: ");
+        ret.append(DeDuplicator.class.getCanonicalName());
+        ret.append("\n");
+        ret.append("  Function:          Set revisit profile on records deemed duplicate by hash comparison\n");
+        ret.append("  Total handled:     " + handledNumber + "\n");
+        ret.append("  Duplicates found:  " + duplicateNumber + " " + 
+        		getPercentage(duplicateNumber.get(),handledNumber.get()) + "\n");
+        ret.append("  Bytes total:       " + totalAmount + " (" + 
+        		ArchiveUtils.formatBytesForDisplay(totalAmount.get()) + ")\n");
+        ret.append("  Bytes duplicte:    " + duplicateAmount + " (" + 
+        		ArchiveUtils.formatBytesForDisplay(duplicateAmount.get()) + ") " + 
+        		getPercentage(duplicateAmount.get(), totalAmount.get()) + "\n");
+        
+    	ret.append("  New (no hits):     " + (handledNumber.get()-
+    			(digestDuplicates.get()+exactURLDuplicates.get()+
+    			 canonicalURLDuplicates.get())) + "\n");
+    	ret.append("  Exact hits:        " + exactURLDuplicates + "\n");
+    	ret.append("  Canonical hits:    " + canonicalURLDuplicates + "\n");
+       	ret.append("  Digest hits:       " + digestDuplicates + "\n");
+        
+       	ret.append("\n");
+       	ret.append("Index:\n");
+       	ret.append(index.getInfo());
+        
+        ret.append("\n");
+        return ret.toString();
+	}
+	
+	protected static String getPercentage(double portion, double total){
+		NumberFormat percentFormat = NumberFormat.getPercentInstance(Locale.ENGLISH);
+		percentFormat.setMaximumFractionDigits(1);
+		return percentFormat.format(portion/total);
+	}
+
 }
+
