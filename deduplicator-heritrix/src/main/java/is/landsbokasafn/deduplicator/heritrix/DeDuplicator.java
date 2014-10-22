@@ -64,16 +64,19 @@ public class DeDuplicator extends Processor {
      *  digest matches.
      */
     AtomicLong exactURLDuplicates = new AtomicLong(0);
+    AtomicLong exactURLDuplicatesBytes = new AtomicLong(0);
     
     /** The number of URIs that turned out to have canonical URL and content
      *  digest matches. Does not include exact matches.
      */
     AtomicLong canonicalURLDuplicates = new AtomicLong(0);
+    AtomicLong canonicalURLDuplicatesBytes = new AtomicLong(0);
     
     /** The number of URIs that, while having no exact or canonical matches,  
      *  do have exact content digest matches against other URIs.
      */
     AtomicLong digestDuplicates = new AtomicLong(0);
+    AtomicLong digestDuplicatesBytes = new AtomicLong(0);
     
     /** The total amount of data represented by the documents who were deemed
      *  duplicates and excluded from further processing.
@@ -166,7 +169,7 @@ public class DeDuplicator extends Processor {
             // Increment statistics counters
             duplicateAmount.addAndGet(curi.getContentSize());
             duplicateNumber.incrementAndGet();
-            count(duplicate, url, canonicalizedURL);
+            count(duplicate, url, canonicalizedURL, curi.getContentLength());
 
             // Attach revisit profile to CURI. This will inform downstream processors that we've 
             // marked this as a duplicate/revisit
@@ -184,13 +187,16 @@ public class DeDuplicator extends Processor {
         return ProcessResult.PROCEED;
 	}
 	
-	private void count(IdenticalPayloadDigestRevisit dup, String url, String canonicalUrl) {
+	private void count(IdenticalPayloadDigestRevisit dup, String url, String canonicalUrl, long contentLength) {
 		if (dup.getRefersToTargetURI().equals(url)) {
 			exactURLDuplicates.incrementAndGet();
+			exactURLDuplicatesBytes.addAndGet(contentLength);
 		} else if (canonicalizer.canonicalize(dup.getRefersToTargetURI()).equals(canonicalUrl)) {
 			canonicalURLDuplicates.incrementAndGet();
+			canonicalURLDuplicatesBytes.addAndGet(contentLength);
 		} else {
 			digestDuplicates.incrementAndGet();
+			digestDuplicatesBytes.addAndGet(contentLength);
 		}
 	}
     
@@ -212,9 +218,15 @@ public class DeDuplicator extends Processor {
     	ret.append("  New (no hits):     " + (handledNumber.get()-
     			(digestDuplicates.get()+exactURLDuplicates.get()+
     			 canonicalURLDuplicates.get())) + "\n");
-    	ret.append("  Exact hits:        " + exactURLDuplicates + "\n");
+    	ret.append("  Exact URL hits:    " + exactURLDuplicates + "\n");
+    	ret.append("  Exact URL bytes:   " + exactURLDuplicatesBytes);
+    	ret.append(" (" + ArchiveUtils.formatBytesForDisplay(exactURLDuplicatesBytes.get()) + ")\n");
     	ret.append("  Canonical hits:    " + canonicalURLDuplicates + "\n");
+    	ret.append("  Canonical bytes:   " + canonicalURLDuplicatesBytes);
+    	ret.append(" (" + ArchiveUtils.formatBytesForDisplay(canonicalURLDuplicatesBytes.get()) + ")\n");
        	ret.append("  Digest hits:       " + digestDuplicates + "\n");
+       	ret.append("  Digest bytes:      " + digestDuplicatesBytes);
+    	ret.append(" (" + ArchiveUtils.formatBytesForDisplay(digestDuplicatesBytes.get()) + ")\n");
        	ret.append("  Average lookup time: " + String.format("%.3f", 
        			(double)(cumulativeLookupDuration.get()/handledNumber.get())/1000000d)  + " ms\n");
        	ret.append("  Last lookup time:    " + String.format("%.3f",(double)(lastLookupDuration/1000000d)) + " ms\n");
