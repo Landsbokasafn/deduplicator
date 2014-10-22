@@ -14,23 +14,24 @@
 
     <properties>
         <maven-site-plugin.skip>true</maven-site-plugin.skip>
+        <org.apache.lucene.version>4.7.1</org.apache.lucene.version>
     </properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.lucene</groupId>
 			<artifactId>lucene-core</artifactId>
-			<version>4.7.1</version>
+			<version>${org.apache.lucene.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.lucene</groupId>
 			<artifactId>lucene-analyzers-common</artifactId>
-			<version>4.7.1</version>
+			<version>${org.apache.lucene.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.lucene</groupId>
 			<artifactId>lucene-queryparser</artifactId>
-			<version>4.7.1</version>
+			<version>${org.apache.lucene.version}</version>
 		</dependency>
 		<!-- Currently OpenWayback-Core is only imported for the AggressiveUrlCanonicalizer -->
 		<dependency>
