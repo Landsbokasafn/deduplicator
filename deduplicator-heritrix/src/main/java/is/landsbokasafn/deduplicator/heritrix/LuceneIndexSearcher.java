@@ -152,7 +152,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 			return lookupUrlCanonical(canonicalizedUrl, digest);
 		case DIGEST_ANY:
 			return lookupDigestAny(url, digest);
-		case DIGEST_URL_PREFERED:
+		case DIGEST_URL_PREFERRED:
 			return lookupDigestUrlPrefered(url,canonicalizedUrl,digest);
     	}
     	return null;

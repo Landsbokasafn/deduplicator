@@ -20,7 +20,7 @@ public enum SearchStrategy {
 	 * significantly slower than {@link #DIGEST_ANY}. Requires that the URL field be indexed (otherwise it runs
 	 * the same as {@link #DIGEST_ANY}).
 	 */
-	DIGEST_URL_PREFERED,
+	DIGEST_URL_PREFERRED,
 	
 	/**
 	 * Do a search on the DIGEST field only. Any hit is a valid duplicate. Only requires that the DIGEST be indexed.
