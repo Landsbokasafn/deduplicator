@@ -11,6 +11,9 @@
 	<artifactId>deduplicator-heritrix</artifactId>
 	<name>DeDuplicator Heritrix Components</name>
 
+    <properties>
+        <maven-site-plugin.skip>true</maven-site-plugin.skip>
+    </properties>
 
 	<dependencies>
 		<dependency>

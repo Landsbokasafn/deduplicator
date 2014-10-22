@@ -13,6 +13,10 @@
 
 	<packaging>pom</packaging>
 	
+	<properties>
+        <maven-site-plugin.skip>true</maven-site-plugin.skip>
+    </properties>
+ 
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -24,39 +28,10 @@
 			<artifactId>deduplicator-indexer</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>org.archive.heritrix</groupId>
-			<artifactId>heritrix</artifactId>
-			<version>${org.archive.heritrix.version}</version>
-			<classifier>dist</classifier>
-			<type>tar.gz</type>
-			<scope>test</scope>
-		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
-			<!-- Unzip Heritrix distribution -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-dependency-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>unpack-heritrix</id>
-						<goals>
-							<goal>unpack-dependencies</goal>
-						</goals>
-						<phase>package</phase>
-						<configuration>
-							<outputDirectory>${project.build.directory}/heritrix</outputDirectory>
-							<includeGroupIds>org.archive.heritrix</includeGroupIds>
-							<excludeTransitive>true</excludeTransitive>
-							<excludeTypes>pom</excludeTypes>
-							<scope>test</scope>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>2.4</version>
@@ -72,8 +47,8 @@
 							<descriptors>
 								<descriptor>src/main/assembly/heritrix.xml</descriptor>
 							</descriptors>
-							<appendAssemblyId>false</appendAssemblyId>
-							<finalName>deduplicator-heritrix-${project.version}-${buildNumber}</finalName>
+							<appendAssemblyId>true</appendAssemblyId>
+							<finalName>deduplicator-${project.version}</finalName>
 						</configuration>
 					</execution>
 					<!-- Then build distribution archives -->
@@ -92,7 +67,7 @@
 									src/main/assembly/src.xml
 								</descriptor>
 							</descriptors>
-							<finalName>deduplicator-${project.version}-${buildNumber}</finalName>
+							<finalName>deduplicator-${project.version}</finalName>
 						</configuration>
 					</execution>
 				</executions>

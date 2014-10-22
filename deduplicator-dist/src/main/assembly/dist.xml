@@ -23,7 +23,7 @@
 			<directory>target</directory>
 			<outputDirectory>deduplicator/heritrix</outputDirectory>
 			<includes>
-				<include>deduplicator-heritrix-*.tar.gz</include>
+				<include>deduplicator-*-heritrix.tar.gz</include>
 			</includes>
 		</fileSet>
 		<fileSet>
