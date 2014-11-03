@@ -284,7 +284,8 @@
 	<bean id="deduplicatorIndex"
 		class="is.landsbokasafn.deduplicator.heritrix.LuceneIndexSearcher">
 		<property name="indexLocation" value="[see override above]" />
-		<property name="searchStrategy" value="[see override above]" />
+        <property name="searchStrategy" value="[see override above]" />
+        <!-- <property name="useBloomFilter" value="false" /> -->
 	</bean>
 
 
