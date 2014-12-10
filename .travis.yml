@@ -22,6 +22,6 @@ branches:
 
 env:
   global:
-    - secure: WeKwwTvKfzpFpy5rr+pXWHLZ80v2TI9gsbZiHZnPktZFZXG9vKlr5n398zt0mQsq+cuqYqvLbOdbtTCLHjZ5qKr4xSGPaeWEuUddfaVeTLDQB5vdPpKGWxn3pvTgXq4O1S5Dla/NWy/3xdgay9eCpPoMH0ysJ6aQX64poRKQ0PI=
-    - secure: NeWLzCt7Co8GZCqwr4MZ2Mpaz6mFeOfWazyGNK8PtXr8xeFwzF71pOd05ZHUwLI6RZpgCM6IUIvChTbDGfssFN1ZHv2Xh98ArxevbOcCO445IW400pPb4nZDJroydkvRyPK1ezrok4SMTxovBZtqFkV0Kn7veYbEuj4SRPHkWbg=
+    - secure: J8oIH1LSsWgoJnF1PhnDi+ff56EEETDPUxQm2mo4Cf0AI+AOLQWXivZ2zdx0PMvvdjUQPrG8+tM8/2YYUyMV+6D8HNcUm6bGw3fJUNCa/znL+ANAbp+G8PyR7afJ+Ihs/CYCiLxxnyTxEzja4cW8HdnNvFtWzA8fl+yVPzw2tnA=
+    - secure: ALhpOKgMuIq/1ilSeOeQHhjTjlNxVmbmj2ewQU0oL5agjjJQAZymGJ5CTqGZyF/BBXjGuLxvfkNqMEvJ0qo6OG5WuPrvF79kENbz6u2vGSTIU+TG1vVIPP0rWyjMENeLNXpthhpozTie269XR7/cLNDwOKLpNsvODLaqhZThAiE=
 
