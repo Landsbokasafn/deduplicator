@@ -227,9 +227,11 @@ public class DeDuplicator extends Processor {
        	ret.append("  Digest hits:       " + digestDuplicates + "\n");
        	ret.append("  Digest bytes:      " + digestDuplicatesBytes);
     	ret.append(" (" + ArchiveUtils.formatBytesForDisplay(digestDuplicatesBytes.get()) + ")\n");
-       	ret.append("  Average lookup time: " + String.format("%.3f", 
-       			(double)(cumulativeLookupDuration.get()/handledNumber.get())/1000000d)  + " ms\n");
-       	ret.append("  Last lookup time:    " + String.format("%.3f",(double)(lastLookupDuration/1000000d)) + " ms\n");
+    	if (handledNumber.get()>0) {
+	       	ret.append("  Average lookup time: " + String.format("%.3f", 
+	       			(double)(cumulativeLookupDuration.get()/handledNumber.get())/1000000d)  + " ms\n");
+	       	ret.append("  Last lookup time:    " + String.format("%.3f",(double)(lastLookupDuration/1000000d)) + " ms\n");
+    	}
        	
        	ret.append("\n");
        	ret.append("Index:\n");

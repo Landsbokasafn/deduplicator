@@ -8,6 +8,7 @@ import static is.landsbokasafn.deduplicator.IndexFields.URL_CANONICALIZED;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,6 +18,7 @@ import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
@@ -25,7 +27,10 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.NIOFSDirectory;
+import org.apache.lucene.util.Bits;
 import org.archive.modules.revisit.IdenticalPayloadDigestRevisit;
+import org.archive.util.ArchiveUtils;
+import org.archive.util.BloomFilter64bit;
 import org.springframework.beans.factory.InitializingBean;
 
 public class LuceneIndexSearcher implements Index, InitializingBean {
@@ -69,11 +74,30 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 		return strategy;
 	}
 	
+	private BloomFilter64bit bf = null;
+	private AtomicInteger bloomHits = new AtomicInteger(); 
+	protected boolean useBloomFilter = false;
+	public boolean getUseBloomFilter() {
+		return useBloomFilter;
+	}
+	/**
+	 * If true, a bloom filter will be constructed from all available digests in the index.
+	 * This happens on crawl build. It is advised (but not required) to wait until the bloom filter is fully populated
+	 * before moving to crawl launch.  
+	 * Modifying this setting at runtime will have no effect.
+	 * @param useBloomFilter
+	 */
+	public void setUseBloomFilter(boolean useBloomFilter) {
+		this.useBloomFilter = useBloomFilter;
+	}
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
     	openIndex(indexLocation);
     	verifyStrategy(strategy);
+    	if (getUseBloomFilter()){
+    		setupBloomFilter();
+    	}
     }
     
     private void openIndex(String indexLocation) {
@@ -88,7 +112,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
         } 
     	inspectIndex();
     }
-    
+
     private void inspectIndex() {
     	// Determine index makeup
         urlIndexed = isFieldIndexed(URL.name());
@@ -130,6 +154,35 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	}
     }
     
+	private void setupBloomFilter() {
+        bf = new BloomFilter64bit(dReader.maxDoc(),22);
+        BuildBloom buildBloom = new BuildBloom(); 
+        Thread myThread = new Thread(buildBloom);
+        myThread.setDaemon(true); 
+        myThread.start(); 
+	}
+	class BuildBloom implements Runnable{
+		@Override
+		public void run() {
+			try {
+		        Bits liveDocs = MultiFields.getLiveDocs(dReader);
+		        long start = System.nanoTime();
+		        int i=0;
+		        for ( ; i<dReader.maxDoc() ; i++) {
+		            if (liveDocs != null && !liveDocs.get(i))
+		                continue;
+	
+		            Document doc = dReader.document(i);
+		            bf.add(doc.get(DIGEST.name()));
+		        }
+		        logger.info("BloomFilter ready. Read " + i + " documents in " + 
+		        		ArchiveUtils.formatMillisecondsToConventional((System.nanoTime()-start)/1000000));
+			} catch (IOException e) {
+				throw new IllegalStateException("Error building bloom filter for index " + indexLocation, e);
+			}
+		}
+	}
+	
     protected boolean isFieldIndexed(String field) {
         IndexReader reader = searcher.getIndexReader();
         for (AtomicReaderContext rc : reader.leaves()) {
@@ -145,6 +198,10 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     
     @Override
 	public IdenticalPayloadDigestRevisit lookup(String url, String canonicalizedUrl, String digest) {
+    	if (bf!=null && !bf.contains(digest)) {
+    		bloomHits.incrementAndGet();
+    		return null;
+    	}
     	switch (strategy) {
 		case URL_EXACT:
 			return lookupUrlExact(url, digest);
@@ -238,6 +295,14 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
 		sb.append(" Records in index: ");
 		sb.append(numDocs);
     	sb.append("\n");
+    	if (bf!=null) {
+    		sb.append(" BloomFilter size: ");
+    		sb.append(bf.size());
+        	sb.append("\n");
+    		sb.append(" BloomFilter hits: ");
+    		sb.append(bloomHits.get());
+        	sb.append("\n");
+    	}
     	
     	return sb.toString();
     }
