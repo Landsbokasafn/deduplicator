@@ -167,7 +167,7 @@ public class DeDuplicator extends Processor {
 
         if (duplicate != null){
         	// A little sanity check
-        	if (duplicate.getPayloadDigest().equals(digest)==false) {
+        	if (!duplicate.getPayloadDigest().equals(digestWithScheme)) {
         		throw new IllegalStateException("Digest for CURI and duplicate does not match for " + curi.toString());
         	}
             // Increment statistics counters
@@ -216,7 +216,7 @@ public class DeDuplicator extends Processor {
         		getPercentage(duplicateNumber.get(),handledNumber.get()) + "\n");
         ret.append("  Bytes total:       " + totalAmount + " (" + 
         		ArchiveUtils.formatBytesForDisplay(totalAmount.get()) + ")\n");
-        ret.append("  Bytes duplicte:    " + duplicateAmount + " (" + 
+        ret.append("  Bytes duplicate:    " + duplicateAmount + " (" + 
         		ArchiveUtils.formatBytesForDisplay(duplicateAmount.get()) + ") " + 
         		getPercentage(duplicateAmount.get(), totalAmount.get()) + "\n");
         

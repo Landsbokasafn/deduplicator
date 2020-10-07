@@ -43,7 +43,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     protected boolean digestIndexed = false; // Is the Digest field indexed
     protected boolean canoncialAvailable = false; // Is the URL_Canonicalized field present. Indexed if URL is.
 
-    protected boolean useDigestScheme = true; // Is the digest algorithm part of the digest string
+    protected boolean useDigestScheme = false; // Is the digest algorithm part of the digest string
     
     private String indexLocation;
     private int numDocs = -1;
