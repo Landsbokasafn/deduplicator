@@ -56,7 +56,7 @@ public class CrawlLogIteratorTest extends TestCase {
         assertNull(tmp);
         
         tmp = cli.parseLine(lineValidWithDigestPrefix);
-        assertEquals("YA3G7O6TNMHXA5WWDSIZJDNXV56WDRCA", tmp.getContentDigest());
+        assertEquals("sha1:YA3G7O6TNMHXA5WWDSIZJDNXV56WDRCA", tmp.getContentDigest());
 
         cli.close();
         
