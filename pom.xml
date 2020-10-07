@@ -6,13 +6,13 @@
 	<parent>
 		<groupId>org.sonatype.oss</groupId>
 		<artifactId>oss-parent</artifactId>
-		<version>7</version>
+		<version>8</version>
 	</parent>
 
 	<groupId>is.landsbokasafn.deduplicator</groupId>
 	<artifactId>deduplicator</artifactId>
 	<name>DeDuplicator (Heritrix 3 add-on module)</name>
-	<version>3.1.0-SNAPSHOT</version>
+	<version>3.2.0-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 	<modules>
