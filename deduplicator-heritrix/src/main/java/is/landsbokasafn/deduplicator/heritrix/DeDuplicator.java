@@ -24,6 +24,7 @@ import static is.landsbokasafn.deduplicator.DeDuplicatorConstants.REVISIT_ANNOTA
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.archive.modules.CrawlURI;
@@ -146,7 +147,9 @@ public class DeDuplicator extends Processor {
 	
 	@Override
 	protected ProcessResult innerProcessResult(CrawlURI curi) throws InterruptedException {
-        logger.finest("Processing " + curi.toString() + "(" + curi.getContentType() + ")");
+		if (logger.isLoggable(Level.FINEST)) {
+			logger.finest("Processing " + curi.toString() + "(" + curi.getContentType() + ")");
+		}
 
         handledNumber.incrementAndGet();
         totalAmount.addAndGet(curi.getContentSize());
@@ -201,6 +204,7 @@ public class DeDuplicator extends Processor {
 		}
 	}
     
+	@Override
 	public String report() {
         StringBuilder ret = new StringBuilder();
         ret.append("Processor: ");

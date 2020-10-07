@@ -132,7 +132,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	// Determine index makeup
         urlIndexed = isFieldIndexed(URL.name());
         digestIndexed = isFieldIndexed(DIGEST.name());
-        if (digestIndexed==false) {
+        if (!digestIndexed) {
         	throw new IllegalStateException("DIGEST fields must be indexed.");
         }
         try {

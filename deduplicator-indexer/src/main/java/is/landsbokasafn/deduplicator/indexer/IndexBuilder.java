@@ -172,7 +172,7 @@ public class IndexBuilder {
 
             // Ok, we wish to index this URL/Digest
             count++;
-            if(verbose && count%10000==0){
+            if (verbose && count%10000==0) {
                 System.out.println("Indexed " + count + ", unresolved " + unresolved + " - Last URL " +
                 		"from " + item.getTimestamp());
             }
@@ -200,12 +200,10 @@ public class IndexBuilder {
 
             // Add digest to document
             String digest = item.getContentDigest();
-            if (!indexDigestScheme) {
+            if (!indexDigestScheme && digest.lastIndexOf(":") >= 0) {
 	            // The prefix will be terminated by a : which is immediately 
 	            // followed by the actual digest
-	            if(digest.lastIndexOf(":") >= 0){
-	            	digest = digest.substring(digest.lastIndexOf(":")+1);
-	            }
+				digest = digest.substring(digest.lastIndexOf(":") + 1);
             }
 
             doc.add(new Field(

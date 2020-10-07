@@ -52,7 +52,7 @@ public class CrawlLogIterator implements CrawlDataIterator {
 	private static final String REVISIT_ANNOTATION_REGEX_PROPERTY = 
 			"deduplicator.crawllogiterator.revisit-annotation-regex";
 	
-	private static String revisitMatchingRegex;
+	private final String revisitMatchingRegex;
 	
     /** 
      * A reader for the crawl.log file being processed
@@ -66,9 +66,10 @@ public class CrawlLogIterator implements CrawlDataIterator {
     protected CrawlDataItem next;
     
     public CrawlLogIterator() {
-    	revisitMatchingRegex = System.getProperty(REVISIT_ANNOTATION_REGEX_PROPERTY);
-    	if (revisitMatchingRegex==null) {
-    		revisitMatchingRegex=REVISIT_ANNOTATION_REGEX;
+    	if (System.getProperties().containsKey(REVISIT_ANNOTATION_REGEX_PROPERTY)) {
+        	revisitMatchingRegex = System.getProperty(REVISIT_ANNOTATION_REGEX_PROPERTY);
+    	} else {
+			revisitMatchingRegex = REVISIT_ANNOTATION_REGEX;
     	}
     }
     

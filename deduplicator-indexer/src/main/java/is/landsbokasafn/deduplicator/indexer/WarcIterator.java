@@ -26,7 +26,7 @@ import java.util.NoSuchElementException;
 
 public class WarcIterator implements CrawlDataIterator {
 
-	public static final String warcFileRegex = "^.*\\.warc(.gz)?$";
+	public static final String WARC_FILE_REGEX = "^.*\\.warc(.gz)?$";
 	
 	private List<File> warcFiles;
 	private Iterator<File> fileIterator = null;
@@ -54,7 +54,7 @@ public class WarcIterator implements CrawlDataIterator {
 		if (!baseDir.exists()) {
 			throw new IllegalArgumentException(source + " is not a valid directory");
 		}
-		warcFiles = new LinkedList<File>();
+		warcFiles = new LinkedList<>();
 		addWarcsInDir(baseDir);
 		Collections.sort(warcFiles);
 		fileIterator=warcFiles.iterator();
@@ -65,7 +65,7 @@ public class WarcIterator implements CrawlDataIterator {
 		for (File f : dir.listFiles()) {
 			if (f.isDirectory()) {
 				addWarcsInDir(f);
-			} else if (f.getName().matches(warcFileRegex)) {
+			} else if (f.getName().matches(WARC_FILE_REGEX)) {
 				warcFiles.add(f);
 			}
 			
