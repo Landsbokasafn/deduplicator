@@ -40,6 +40,7 @@ public class IndexingLauncher {
 	private static final String ADD_TO_INDEX_CONF_KEY = "deduplicator.add";
 	private static final String ITERATOR_CONF_KEY = "deduplicator.crawldataiterator";
 	private static final String VERBOSE_CONF_KEY = "deduplicator.verbose";
+	private static final String INDEX_DIGEST_SCHEME = "deduplicator.indexdigestscheme";
 	
 	private static void loadConfiguration() {
 		// Load properties file, either from heritrix.home/conf or
@@ -96,6 +97,7 @@ public class IndexingLauncher {
         boolean canonical = readBooleanConfig(CANONICAL_CONF_KEY, true);
         boolean indexURL = readBooleanConfig(INDEX_URL_KEY, true);
         boolean addToIndex = readBooleanConfig(ADD_TO_INDEX_CONF_KEY, false);
+        boolean indexDigestScheme = readBooleanConfig(INDEX_DIGEST_SCHEME, false);
         String mimefilter = readStringConfig(MIME_CONF_KEY, "^text/.*");
         boolean whitelist = readBooleanConfig(WHITELIST_CONF_KEY, false);
         String iteratorClassName = readStringConfig(ITERATOR_CONF_KEY, WarcIterator.class.getName());
@@ -161,7 +163,8 @@ public class IndexingLauncher {
         		indexURL,
                 canonical, 
                 etag,
-                addToIndex);
+                addToIndex,
+                indexDigestScheme);
         di.writeToIndex(iterator, mimefilter, !whitelist, verbose);
         
         // Clean-up

@@ -43,6 +43,8 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     protected boolean digestIndexed = false; // Is the Digest field indexed
     protected boolean canoncialAvailable = false; // Is the URL_Canonicalized field present. Indexed if URL is.
 
+    protected boolean useDigestScheme = true; // Is the digest algorithm part of the digest string
+    
     private String indexLocation;
     private int numDocs = -1;
     /**
@@ -57,7 +59,20 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
         return indexLocation;
     }
 
-    protected SearchStrategy strategy;
+
+    /**
+     * If true, it is assumed that the digest string, in the index, contains the hashing algorithm 'scheme' prefix.
+     * If false, it is assumed to not have that prefix and the scheme will be omitted when doing lookup.
+     * @param useDigestScheme Whether or not the digest algorithm prefix is part of the digest strings in the index.
+     */
+	public void setUseDigestScheme(boolean useDigestScheme) {
+		this.useDigestScheme = useDigestScheme;
+	}
+	public boolean isUseDigestScheme() {
+		return useDigestScheme;
+	}
+
+	protected SearchStrategy strategy;
     /**
      * Set the search strategy to employ.
      *  
@@ -197,39 +212,53 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     }
     
     @Override
-	public IdenticalPayloadDigestRevisit lookup(String url, String canonicalizedUrl, String digest) {
+	public IdenticalPayloadDigestRevisit lookup(String url, String canonicalizedUrl, String digest,
+			String digestWithScheme) {
+    	String queryDigest = digest;
+    	if (useDigestScheme) {
+    		queryDigest = digestWithScheme;
+    	}
     	if (bf!=null && !bf.contains(digest)) {
     		bloomHits.incrementAndGet();
     		return null;
     	}
+    	Document doc = null;
     	switch (strategy) {
 		case URL_EXACT:
-			return lookupUrlExact(url, digest);
+			doc = lookupUrlExact(url, queryDigest);
+			break;
 		case URL_CANONICAL:
-			return lookupUrlCanonical(canonicalizedUrl, digest);
+			doc = lookupUrlCanonical(canonicalizedUrl, queryDigest);
+			break;
 		case DIGEST_ANY:
-			return lookupDigestAny(url, digest);
+			doc = lookupDigestAny(queryDigest);
+			break;
 		case DIGEST_URL_PREFERRED:
-			return lookupDigestUrlPrefered(url,canonicalizedUrl,digest);
+			doc = lookupDigestUrlPrefered(url, canonicalizedUrl, queryDigest);
+			break;
     	}
-    	return null;
+    	if (doc == null) {
+    		return null;
+    	}
+    	
+    	return wrap(doc, digestWithScheme);
     }
     
-    protected IdenticalPayloadDigestRevisit lookupUrlExact(final String url, final String digest) {
+    protected Document lookupUrlExact(final String url, final String digest) {
     	BooleanQuery q = new BooleanQuery();
     	q.add(new TermQuery(new Term(URL.name(), url)), Occur.MUST);
     	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
     	return query(q);
     }
     
-    protected IdenticalPayloadDigestRevisit lookupUrlCanonical(final String canonicalizedUrl, final String digest) {
+    protected Document lookupUrlCanonical(final String canonicalizedUrl, final String digest) {
     	BooleanQuery q = new BooleanQuery();
     	q.add(new TermQuery(new Term(URL_CANONICALIZED.name(), canonicalizedUrl)), Occur.MUST);
     	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
     	return query(q);
     }
     
-    protected IdenticalPayloadDigestRevisit lookupDigestUrlPrefered(
+    protected Document lookupDigestUrlPrefered(
     		final String url, final String canonicalizedUrl, final String digest) {
     	BooleanQuery q = new BooleanQuery();
     	q.add(new TermQuery(new Term(DIGEST.name(), digest)), Occur.MUST);
@@ -242,7 +271,7 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
         return query(q);
     }
 
-    protected IdenticalPayloadDigestRevisit lookupDigestAny(final String url, final String digest) {
+	protected Document lookupDigestAny(final String digest) {
         return query(new TermQuery(new Term(DIGEST.name(), digest)));
     }
 
@@ -253,21 +282,21 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
      *              the most appropriate one to use if there are multiple hits.
      * @return A duplicate based on the first hit of the query or null if query returned no hits.
      */
-	protected IdenticalPayloadDigestRevisit query(Query query) {
-		IdenticalPayloadDigestRevisit duplicate = null; 
+	protected Document query(Query query) {
+		Document doc = null; 
 		try {
 			ScoreDoc[] hits = searcher.search(query, null, 1).scoreDocs;
             if(hits != null && hits.length > 0){
-                duplicate = wrap(searcher.doc(hits[0].doc));
+                doc = searcher.doc(hits[0].doc);
             }
 		} catch (IOException e) {
 			logger.log(Level.SEVERE, "Error accessing index.", e);
 		}
-		return duplicate; 
+		return doc; 
 	}
 	
-	protected IdenticalPayloadDigestRevisit wrap(Document doc) {
-		IdenticalPayloadDigestRevisit duplicate = new IdenticalPayloadDigestRevisit(doc.get(DIGEST.name()));
+	protected IdenticalPayloadDigestRevisit wrap(Document doc, String digestWithScheme) {
+		IdenticalPayloadDigestRevisit duplicate = new IdenticalPayloadDigestRevisit(digestWithScheme);
     	
     	duplicate.setRefersToTargetURI(doc.get(URL.name()));
    		duplicate.setRefersToDate(doc.get(DATE.name()));
@@ -292,10 +321,12 @@ public class LuceneIndexSearcher implements Index, InitializingBean {
     	sb.append("\n");
     	sb.append(" Search strategy: " + getSearchStrategy());
     	sb.append("\n");
+    	sb.append(" Digest in index includes hashing algorithm: " + useDigestScheme);
+    	sb.append("\n");
 		sb.append(" Records in index: ");
 		sb.append(numDocs);
     	sb.append("\n");
-    	if (bf!=null) {
+		if (bf != null) {
     		sb.append(" BloomFilter size: ");
     		sb.append(bf.size());
         	sb.append("\n");

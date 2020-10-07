@@ -190,12 +190,6 @@ public class CrawlLogIterator implements CrawlDataIterator {
 
             // Index 9: Digest
             String digest = lineParts[9];
-            // The digest may contain a prefix. 
-            // The prefix will be terminated by a : which is immediately 
-            // followed by the actual digest
-            if(digest.lastIndexOf(":") >= 0){
-            	digest = digest.substring(digest.lastIndexOf(":")+1);
-            }
             
             // Index 10: Source tag (ignore)
             

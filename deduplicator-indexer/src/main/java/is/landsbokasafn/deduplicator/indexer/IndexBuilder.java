@@ -60,6 +60,7 @@ public class IndexBuilder {
     boolean includeEtag = false;
     boolean includeCanonicalizedURL = false;
     boolean indexURL = true;
+    boolean indexDigestScheme = false;
 
     /**
      * Each instance of this class wraps one Lucene index for writing 
@@ -82,11 +83,13 @@ public class IndexBuilder {
             boolean indexURL,
             boolean includeCanonicalizedURL,
             boolean includeEtag,
-            boolean addToExistingIndex) throws IOException {
+            boolean addToExistingIndex,
+            boolean indexDigestScheme) throws IOException {
         
     	this.indexURL = indexURL;
         this.includeEtag = includeEtag;
         this.includeCanonicalizedURL = includeCanonicalizedURL;
+        this.indexDigestScheme = indexDigestScheme;
         
         IndexWriterConfig indexWriterConfig = 
         		new IndexWriterConfig(LUCENE_VER, new WhitespaceAnalyzer(LUCENE_VER));
@@ -196,9 +199,18 @@ public class IndexBuilder {
             }
 
             // Add digest to document
+            String digest = item.getContentDigest();
+            if (!indexDigestScheme) {
+	            // The prefix will be terminated by a : which is immediately 
+	            // followed by the actual digest
+	            if(digest.lastIndexOf(":") >= 0){
+	            	digest = digest.substring(digest.lastIndexOf(":")+1);
+	            }
+            }
+
             doc.add(new Field(
                     DIGEST.name(),
-                    item.getContentDigest(),
+                    digest,
                     ftIndexed));
             
             // add timestamp

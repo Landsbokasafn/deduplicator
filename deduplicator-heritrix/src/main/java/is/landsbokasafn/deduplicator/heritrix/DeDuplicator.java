@@ -154,9 +154,10 @@ public class DeDuplicator extends Processor {
         String url = curi.getURI();
         String canonicalizedURL = canonicalizer.canonicalize(url);
 		String digest = curi.getContentDigestString();
+		String digestWithScheme = curi.getContentDigestString();
         
 		long beginLookup = System.nanoTime();
-        IdenticalPayloadDigestRevisit duplicate = index.lookup(url, canonicalizedURL, digest);
+        IdenticalPayloadDigestRevisit duplicate = index.lookup(url, canonicalizedURL, digest, digestWithScheme);
         long lookupTook = System.nanoTime()-beginLookup;
         cumulativeLookupDuration.addAndGet(lookupTook);
         lastLookupDuration=lookupTook;

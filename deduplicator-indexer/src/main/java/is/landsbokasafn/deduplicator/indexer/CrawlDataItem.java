@@ -63,7 +63,7 @@ public class CrawlDataItem {
     }
     
     /**
-     * Returns the documents content digest
+     * Returns the documents content digest (including prefix identifying the hashing algorithm)
      * @return the documents content digest
      */
     public String getContentDigest(){
@@ -72,7 +72,7 @@ public class CrawlDataItem {
     
     /**
      * Set the content digest
-     * @param contentDigest The new value of the content digest
+     * @param contentDigest The new value of the content digest (including prefix identifying the hashing algorithm)
      */
     public void setContentDigest(String contentDigest){
         this.contentDigest = contentDigest;
