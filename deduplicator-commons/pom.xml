@@ -14,7 +14,7 @@
 
     <properties>
         <maven-site-plugin.skip>true</maven-site-plugin.skip>
-        <org.apache.lucene.version>4.7.1</org.apache.lucene.version>
+        <org.apache.lucene.version>8.6.2</org.apache.lucene.version>
     </properties>
 
 	<dependencies>
