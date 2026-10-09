@@ -137,6 +137,12 @@ public class DeDuplicator extends Processor {
                     + ", already flagged as revisit.");
             return false;
         }
+        if (curi.getContentDigest() == null) {
+            // Nothing to look up. Heritrix 3.18+ leaves the digest empty when it cannot
+            // decode a chunked response (e.g. one truncated between chunks).
+            logger.finest("Not handling " + curi.toString() + ", no content digest.");
+            return false;
+        }
         return true;
 	}
 

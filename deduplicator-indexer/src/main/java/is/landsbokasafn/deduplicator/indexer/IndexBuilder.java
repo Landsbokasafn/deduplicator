@@ -156,6 +156,13 @@ public class IndexBuilder {
             	continue;
             }
 
+            if (item.getContentDigest() == null || item.getContentDigest().equals("-")) {
+            	// Nothing to index. Heritrix 3.18+ leaves the digest empty (no WARC-Payload-Digest
+            	// header, "-" in crawl.log) when it cannot decode a chunked response.
+            	skipped++;
+            	continue;
+            }
+
             String url = item.getURL();
             String timestamp = item.getTimestamp();
 

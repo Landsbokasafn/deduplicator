@@ -13,6 +13,7 @@
 				<include>org.apache.lucene:lucene-core</include>
 				<include>org.apache.lucene:lucene-queryparser</include>
 				<include>org.netpreserve.openwayback:openwayback-core</include>
+				<include>commons-httpclient:commons-httpclient</include>
 			</includes>
 			<useProjectArtifact>false</useProjectArtifact>
 		</dependencySet>

@@ -30,8 +30,7 @@
 
 				metadata.operatorContactUrl=ENTER_AN_URL_WITH_YOUR_CONTACT_INFO_HERE_FOR_WEBMASTERS_AFFECTED_BY_YOUR_CRAWL
 				metadata.jobName=basic
-				metadata.description=Basic crawl starting with
-				useful defaults
+				metadata.description=Basic crawl starting with useful defaults
 
 				# Location of DeDuplicator index
 				deduplicatorIndex.indexLocation=ENTER_THE_LOCATION_OF_YOUR_INDEX_HERE

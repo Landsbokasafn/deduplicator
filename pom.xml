@@ -12,7 +12,7 @@
 	<groupId>is.landsbokasafn.deduplicator</groupId>
 	<artifactId>deduplicator</artifactId>
 	<name>DeDuplicator (Heritrix 3 add-on module)</name>
-	<version>3.2.0-SNAPSHOT</version>
+	<version>3.3.0-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 	<modules>
@@ -81,7 +81,7 @@
 	</organization>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<org.archive.heritrix.version>3.14.0</org.archive.heritrix.version>
+		<org.archive.heritrix.version>3.18.0</org.archive.heritrix.version>
 	</properties>
 	
 	<!-- Hack to ensure we can deploy a multi-module site under a prefix. See 
